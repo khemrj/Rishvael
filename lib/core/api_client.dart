@@ -4,7 +4,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 class ApiClient {
   // ⚠️ CHANGE THIS to your PC's LAN IP (run `ipconfig` / `ifconfig`).
   // Phone and PC must be on the same Wi-Fi. Example: 192.168.1.5
-  static const String baseUrl = 'http://192.168.1.7:8080';
+  static const String baseUrl = 'http://192.168.1.5:8080';
 
   static final _storage = const FlutterSecureStorage();
   static const _tokenKey = 'access_token';

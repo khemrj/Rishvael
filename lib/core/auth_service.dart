@@ -258,4 +258,41 @@ class AuthService {
         return e.message ?? 'Network error. Please try again.';
     }
   }
+  /// Step 1 — request a reset link. Hits POST /api/v1/auth/forgot-password
+Future<AuthResult> forgotPassword({required String email}) async {
+  try {
+    final res = await ApiClient.dio.post('/api/v1/auth/forgot-password', data: {
+      'email': email,
+    });
+    if (res.statusCode == 200) {
+      return AuthResult(success: true);
+    }
+    return AuthResult(success: false, error: _extractError(res));
+  } on DioException catch (e) {
+    return AuthResult(success: false, error: _networkError(e));
+  } catch (e) {
+    return AuthResult(success: false, error: 'Unexpected error: $e');
+  }
+}
+
+/// Step 2 — submit token + new password. Hits POST /api/v1/auth/reset-password
+Future<AuthResult> resetPassword({
+  required String token,
+  required String newPassword,
+}) async {
+  try {
+    final res = await ApiClient.dio.post('/api/v1/auth/reset-password', data: {
+      'token': token,
+      'newPassword': newPassword,
+    });
+    if (res.statusCode == 200) {
+      return AuthResult(success: true);
+    }
+    return AuthResult(success: false, error: _extractError(res));
+  } on DioException catch (e) {
+    return AuthResult(success: false, error: _networkError(e));
+  } catch (e) {
+    return AuthResult(success: false, error: 'Unexpected error: $e');
+  }
+}
 }

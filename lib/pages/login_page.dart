@@ -1,6 +1,7 @@
 // lib/pages/login_page.dart
 
 import 'package:flutter/material.dart';
+import 'package:flutter_application_1/pages/forgot_password_page.dart';
 import '../core/auth_service.dart';
 import 'customer_dashboard.dart';
 import 'admin_dashboard.dart';
@@ -100,7 +101,7 @@ class _LoginPageState extends State<LoginPage> {
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(
+            padding: const EdgeInsets.symmetric( 
               horizontal: 24,
               vertical: 32,
             ),
@@ -260,7 +261,35 @@ class _LoginPageState extends State<LoginPage> {
                       return null;
                     },
                   ),
-
+                  // ── Forgot Password link ───────────────────
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: TextButton(
+                      onPressed: _isLoading
+                          ? null
+                          : () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => const ForgotPasswordPage(),
+                                ),
+                              );
+                            },
+                      style: TextButton.styleFrom(
+                        padding: EdgeInsets.zero,
+                        minimumSize: Size.zero,
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      ),
+                      child: const Text(
+                        'Forgot Password?',
+                        style: TextStyle(
+                          color: Colors.blue,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ),
                   const SizedBox(height: 28),
 
                   // ── Login Button ───────────────────────────
