@@ -4,7 +4,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 class ApiClient {
   // ⚠️ CHANGE THIS to your PC's LAN IP (run `ipconfig` / `ifconfig`).
   // Phone and PC must be on the same Wi-Fi. Example: 192.168.1.5
-  static const String baseUrl = 'http://192.168.1.5:8080';
+  static const String baseUrl = 'http://10.84.197.231:8080';
 
   static final _storage = const FlutterSecureStorage();
   static const _tokenKey = 'access_token';
@@ -21,10 +21,12 @@ class ApiClient {
   )..interceptors.add(
       InterceptorsWrapper(
         onRequest: (options, handler) async {
-          // Attach JWT automatically to every request (the Volley-interceptor equivalent)
-          final token = await _storage.read(key: _tokenKey);
-          if (token != null) {
-            options.headers['Authorization'] = 'Bearer $token';
+          // Do not attach token to public auth endpoints
+          if (!options.path.startsWith('/api/v1/auth/')) {
+            final token = await _storage.read(key: _tokenKey);
+            if (token != null) {
+              options.headers['Authorization'] = 'Bearer $token';
+            }
           }
           return handler.next(options);
         },

@@ -1,5 +1,6 @@
 // lib/services/auth_service.dart
 
+import 'dart:convert';
 import 'package:dio/dio.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../core/api_client.dart';
@@ -122,10 +123,10 @@ class AuthService {
         // Verify server confirms success
         final serverSuccess = wrapper?['success'] as bool? ?? false;
         if (!serverSuccess) {
+          final errStr = _extractErrorFromMap(wrapper);
           return AuthResult(
             success: false,
-            error: wrapper?['message'] as String? ??
-                'Login failed',
+            error: errStr ?? 'Login failed',
           );
         }
 
@@ -217,16 +218,25 @@ class AuthService {
   String _extractError(Response res) {
     final data = res.data;
     if (data is Map) {
-      // Try nested message first
-      final message = data['message'];
-      if (message != null) return message.toString();
+      final msg = _extractErrorFromMap(data);
+      if (msg != null && msg.trim().isNotEmpty) return msg;
+    } else if (data is String && data.trim().isNotEmpty) {
+      try {
+        final parsed = jsonDecode(data);
+        if (parsed is Map) {
+          final msg = _extractErrorFromMap(parsed);
+          if (msg != null && msg.trim().isNotEmpty) return msg;
+        }
+      } catch (_) {}
+      if (!_isGenericAuthMessage(data)) return data;
     }
-    // Fallback to status code based messages
+
+    // Fallback to status code based messages if server sent generic or empty response
     switch (res.statusCode) {
       case 401:
-        return 'Invalid email or password';
+        return 'Authentication failed: Account may be disabled, locked, or credentials invalid.';
       case 403:
-        return 'Access denied';
+        return 'Access denied: Account is disabled or locked.';
       case 409:
         return 'Account already exists';
       case 429:
@@ -238,6 +248,58 @@ class AuthService {
     }
   }
 
+  String? _extractErrorFromMap(Map? data) {
+    if (data == null) return null;
+
+    final message = data['message']?.toString();
+    final error = data['error']?.toString();
+    final details = data['details']?.toString();
+    final exception = data['exception']?.toString();
+
+    String? nestedMsg;
+    if (data['data'] is Map) {
+      nestedMsg = _extractErrorFromMap(data['data'] as Map);
+    } else if (data['data'] is String && (data['data'] as String).trim().isNotEmpty) {
+      nestedMsg = data['data'] as String;
+    }
+
+    final candidates = [
+      if (nestedMsg != null && _isSpecificError(nestedMsg)) nestedMsg,
+      if (message != null && _isSpecificError(message)) message,
+      if (error != null && _isSpecificError(error)) error,
+      if (details != null && _isSpecificError(details)) details,
+      if (exception != null && _isSpecificError(exception)) exception,
+
+      if (nestedMsg != null && nestedMsg.trim().isNotEmpty && !_isGenericAuthMessage(nestedMsg)) nestedMsg,
+      if (message != null && message.trim().isNotEmpty && !_isGenericAuthMessage(message)) message,
+      if (error != null && error.trim().isNotEmpty && !_isGenericAuthMessage(error)) error,
+      if (details != null && details.trim().isNotEmpty && !_isGenericAuthMessage(details)) details,
+      if (exception != null && exception.trim().isNotEmpty && !_isGenericAuthMessage(exception)) exception,
+    ];
+
+    return candidates.isNotEmpty ? candidates.first : null;
+  }
+
+  bool _isSpecificError(String text) {
+    final lower = text.toLowerCase();
+    return lower.contains('disabled') ||
+        lower.contains('locked') ||
+        lower.contains('bad credentials') ||
+        lower.contains('expired') ||
+        lower.contains('inactive') ||
+        lower.contains('blocked') ||
+        lower.contains('deactivated');
+  }
+
+  bool _isGenericAuthMessage(String text) {
+    final lower = text.toLowerCase().trim();
+    return lower.contains('authentication required') ||
+        lower.contains('please login') ||
+        lower.contains('full authentication is required') ||
+        lower == 'unauthorized' ||
+        lower == 'access denied';
+  }
+
   /// Converts DioException into user-friendly message.
   String _networkError(DioException e) {
     switch (e.type) {
@@ -247,14 +309,14 @@ class AuthService {
       case DioExceptionType.receiveTimeout:
         return 'Server is taking too long. Please retry.';
       case DioExceptionType.badResponse:
-        // Server responded with error status code
-        // Try to extract message from error response body
-        final data = e.response?.data;
-        if (data is Map && data['message'] != null) {
-          return data['message'].toString();
+        if (e.response != null) {
+          return _extractError(e.response!);
         }
-        return _extractError(e.response!);
+        return 'Server responded with an error (${e.response?.statusCode}).';
       default:
+        if (e.response != null) {
+          return _extractError(e.response!);
+        }
         return e.message ?? 'Network error. Please try again.';
     }
   }

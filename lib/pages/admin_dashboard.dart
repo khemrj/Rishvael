@@ -245,15 +245,46 @@ class _AdminDashboardState extends State<AdminDashboard> {
     return _OverviewView(controller: _controller);
   }
 
+  Future<bool> _showLogoutDialog() async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Confirm Logout'),
+        content: const Text('Do you want to log out?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Logout'),
+          ),
+        ],
+      ),
+    );
+    return confirm ?? false;
+  }
+
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, c) {
-        final w = c.maxWidth;
-        if (w >= 1240) return _desktop();
-        if (w >= 600) return _tablet();
-        return _mobile();
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (bool didPop, dynamic result) async {
+        if (didPop) return;
+        final shouldLogout = await _showLogoutDialog();
+        if (shouldLogout && mounted) {
+          _logout();
+        }
       },
+      child: LayoutBuilder(
+        builder: (context, c) {
+          final w = c.maxWidth;
+          if (w >= 1240) return _desktop();
+          if (w >= 600) return _tablet();
+          return _mobile();
+        },
+      ),
     );
   }
 
