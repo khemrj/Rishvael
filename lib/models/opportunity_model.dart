@@ -223,9 +223,12 @@ class Opportunity {
         responsibilities: List<String>.from(json['responsibilities'] as List),
         requiredSkills: List<String>.from(json['requiredSkills'] as List),
         qualifications: List<String>.from(json['qualifications'] as List),
-       compensation: json['compensation'] == null
-    ? CompensationRange.undisclosed
-    : CompensationRange.fromJson(json['compensation'] as Map<String, dynamic>),
+       compensation: CompensationRange(
+        min: (json['compensationMin'] as num?)?.toDouble(),
+        max: (json['compensationMax'] as num?)?.toDouble(),
+        currency: json['compensationCurrency'] as String? ?? 'USD',
+        disclosed: json['compensationDisclosed'] as bool? ?? true,
+      ),
         openings: json['openings'] as int,
         status: OpportunityStatus.values.byName(_fromWireEnum(json['status'] as String)),
         postedAt: DateTime.parse(json['postedAt'] as String),

@@ -1,10 +1,11 @@
-import 'dart:isolate';
+
 
 import 'package:dio/dio.dart';
 
 import '../core/api_client.dart';
 import '../core/api_failure.dart';
 import '../models/user_profile.dart';
+import '../models/opportunity_model.dart';
 import '../models/feed_models.dart';
 
 /// The repository is the ONLY place that knows JSON exists.
@@ -27,7 +28,24 @@ class DashboardRepository {
   Future<UserProfile> fetchProfile({CancelToken? cancel}) =>
       _get('/api/v1/me', cancel, (data) => UserProfile.fromJson(data as Map<String, dynamic>));
 
-  Future<List<Opportunity>> fetchOpportunities({
+Future<List<T>> _getList<T>(
+  String path,
+  CancelToken? cancel,
+  T Function(Map<String, dynamic>) fromJson, {
+  Map<String, dynamic>? query,
+}) async {
+  final response = await _dio.get(path, queryParameters: query, cancelToken: cancel);
+  final body = response.data;
+
+  final List<dynamic> rawList = switch (body) {
+    List() => body,
+    {'data': List<dynamic>() && final data} => data, // your {success, message, data, timestamp} envelope
+    _ => throw FormatException('Unexpected list shape for $path: ${body.runtimeType}'),
+  };
+
+  return rawList.map((e) => fromJson(e as Map<String, dynamic>)).toList();
+}
+    Future<List<Opportunity>> fetchOpportunities({
     OpportunityKind? kind,
     String? query,
     CancelToken? cancel,
@@ -41,7 +59,6 @@ class DashboardRepository {
           if (query != null && query.isNotEmpty) 'q': query,
         },
       );
-
   Future<List<ApplicationRecord>> fetchApplications({CancelToken? cancel}) =>
       _getList('/api/v1/me/applications', cancel, ApplicationRecord.fromJson);
 
@@ -116,39 +133,7 @@ class DashboardRepository {
   ///
   /// So: small list → map inline (spawning an isolate costs ~1–2ms + copy).
   ///     big list   → `Isolate.run`, which spawns, runs, returns, and dies.
-  static const _isolateThreshold = 250;
+  
 
-  Future<List<T>> _getList<T>(
-    String path,
-    CancelToken? cancel,
-    T Function(Map<String, dynamic>) fromJson, {
-    Map<String, dynamic>? query,
-  }) =>
-      _guard(() async {
-        final res = await _dio.get<List<dynamic>>(
-          path,
-          queryParameters: query,
-          cancelToken: cancel,
-          options: _strict,
-        );
-        final raw = res.data ?? const [];
-
-        if (raw.length < _isolateThreshold) {
-          return raw
-              .whereType<Map<String, dynamic>>()
-              .map(fromJson)
-              .toList(growable: false);
-        }
-
-        // Isolate.run (Dart 2.19+) replaces the whole spawn/port/kill dance.
-        // CAUTION: `fromJson` must be a top-level or static function. A closure
-        // that captures `this` cannot cross the isolate boundary — you'll get
-        // "Illegal argument in isolate message" at runtime, not compile time.
-        return Isolate.run(
-          () => raw
-              .whereType<Map<String, dynamic>>()
-              .map(fromJson)
-              .toList(growable: false),
-        );
-      });
+  
 }

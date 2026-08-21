@@ -34,49 +34,6 @@ extension OpportunityKindExtension on OpportunityKind {
   }
 }
 
-class Opportunity {
-  final String id;
-  final String title;
-  final String company;
-  final String location;
-  final OpportunityKind kind;
-  final String description;
-  final DateTime? postedAt;
-
-  const Opportunity({
-    required this.id,
-    required this.title,
-    required this.company,
-    required this.location,
-    required this.kind,
-    this.description = '',
-    this.postedAt,
-  });
-
-  factory Opportunity.fromJson(Map<String, dynamic> json) {
-    return Opportunity(
-      id: json['id'] as String? ?? '',
-      title: json['title'] as String? ?? '',
-      company: json['company'] as String? ?? '',
-      location: json['location'] as String? ?? '',
-      kind: OpportunityKindExtension.fromWire(json['kind'] as String?),
-      description: json['description'] as String? ?? '',
-      postedAt: json['postedAt'] != null
-          ? DateTime.tryParse(json['postedAt'] as String)
-          : null,
-    );
-  }
-
-  Map<String, dynamic> toJson() => {
-        'id': id,
-        'title': title,
-        'company': company,
-        'location': location,
-        'kind': kind.wire,
-        'description': description,
-        if (postedAt != null) 'postedAt': postedAt!.toIso8601String(),
-      };
-}
 
 class ApplicationRecord {
   final String id;

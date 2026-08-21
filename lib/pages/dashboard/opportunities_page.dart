@@ -1,11 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../core/async_view.dart';
-import '../../core/responsive.dart';
-import '../../models/feed_models.dart';
+import '../../models/opportunity_model.dart';
 import '../../providers/dashboard_providers.dart';
-import 'widgets/section_card.dart';
 
 class OpportunitiesPage extends ConsumerWidget {
   const OpportunitiesPage({super.key});
@@ -13,89 +10,83 @@ class OpportunitiesPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final opportunitiesAsync = ref.watch(opportunitiesProvider);
-    final selectedFilter = ref.watch(opportunityFilterProvider);
 
-    return RefreshIndicator.adaptive(
-      onRefresh: () async {
-        ref.invalidate(opportunitiesProvider);
-        await ref.read(opportunitiesProvider.future);
-      },
-      child: ReadableWidth(
-        maxWidth: 1080,
-        child: SingleChildScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('Opportunities', style: Theme.of(context).textTheme.headlineMedium),
-              const SizedBox(height: 16),
-              SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: Row(
-                  children: [
-                    FilterChip(
-                      label: const Text('All'),
-                      selected: selectedFilter == null,
-                      onSelected: (_) => ref
-                          .read(opportunityFilterProvider.notifier)
-                          .select(null),
-                    ),
-                    const SizedBox(width: 8),
-                    for (final k in OpportunityKind.values) ...[
-                      FilterChip(
-                        label: Text(k.name.toUpperCase()),
-                        selected: selectedFilter == k,
-                        onSelected: (_) => ref
-                            .read(opportunityFilterProvider.notifier)
-                            .select(k),
-                      ),
-                      const SizedBox(width: 8),
-                    ],
-                  ],
-                ),
-              ),
-              const SizedBox(height: 20),
-              SectionCard(
-                title: 'Available Positions',
-                child: AsyncView<List<Opportunity>>(
-                  value: opportunitiesAsync,
-                  onRetry: () => ref.invalidate(opportunitiesProvider),
-                  data: (list) => list.isEmpty
-                      ? const EmptyState(
-                          icon: Icons.search_off_rounded,
-                          title: 'No matching opportunities',
-                          message: 'Try clearing your filters or search query.',
-                        )
-                      : Column(
-                          children: [
-                            for (final item in list) ...[
-                              ListTile(
-                                contentPadding: EdgeInsets.zero,
-                                leading: CircleAvatar(
-                                  child: Icon(
-                                    item.kind == OpportunityKind.internship
-                                        ? Icons.school_outlined
-                                        : Icons.business_center_outlined,
-                                  ),
-                                ),
-                                title: Text(item.title),
-                                subtitle: Text('${item.company} · ${item.location}'),
-                                trailing: FilledButton(
-                                  onPressed: () {
-                                    ref.read(applyToOpportunityProvider)(item.id);
-                                  },
-                                  child: const Text('Apply'),
-                                ),
-                              ),
-                              const Divider(),
-                            ],
-                          ],
-                        ),
-                ),
-              ),
-            ],
-          ),
+    return RefreshIndicator(
+      onRefresh: () => refreshDashboard(ref),
+      child: opportunitiesAsync.when(
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (err, stack) => ListView(
+          children: [
+            const SizedBox(height: 120),
+            Center(child: Text('Failed to load opportunities:\n$err', textAlign: TextAlign.center)),
+          ],
+        ),
+        data: (opportunities) {
+          if (opportunities.isEmpty) {
+            return ListView(
+              children: const [
+                SizedBox(height: 120),
+                Center(child: Text('No opportunities available right now.')),
+              ],
+            );
+          }
+          return ListView.separated(
+            padding: const EdgeInsets.all(16),
+            itemCount: opportunities.length,
+            separatorBuilder: (_, __) => const SizedBox(height: 12),
+            itemBuilder: (context, i) => _OpportunityCard(opportunity: opportunities[i]),
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _OpportunityCard extends StatelessWidget {
+  const _OpportunityCard({required this.opportunity});
+
+  final Opportunity opportunity;
+
+  @override
+  Widget build(BuildContext context) {
+    final o = opportunity;
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(child: Text(o.title, style: Theme.of(context).textTheme.titleMedium)),
+                Chip(label: Text(o.type.label)),
+              ],
+            ),
+            const SizedBox(height: 4),
+            Text(o.businessName, style: Theme.of(context).textTheme.bodySmall),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 4,
+              children: [
+                Chip(label: Text(o.specialization.label)),
+                Chip(label: Text(o.workMode.label)),
+                Chip(label: Text(o.experienceLevel.label)),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(o.location),
+            const SizedBox(height: 8),
+            Text(o.description, maxLines: 2, overflow: TextOverflow.ellipsis),
+            const SizedBox(height: 8),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(o.compensation.display(), style: Theme.of(context).textTheme.bodyMedium),
+                Text('${o.openings} opening${o.openings == 1 ? '' : 's'}'),
+              ],
+            ),
+          ],
         ),
       ),
     );

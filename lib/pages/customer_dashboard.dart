@@ -14,7 +14,6 @@ import '../providers/dashboard_providers.dart';
 import 'dashboard/advisory_page.dart';
 import 'dashboard/network_page.dart';
 import 'dashboard/opportunities_page.dart';
-import 'dashboard/overview_page.dart';
 import '../pages/post_opportunity_page.dart';
 
 /// A record type (Dart 3): a tuple with named fields, no class boilerplate.8
@@ -22,7 +21,6 @@ import '../pages/post_opportunity_page.dart';
 typedef _Dest = ({String label, IconData icon, IconData selectedIcon});
 
 const _destinations = <_Dest>[
-  (label: 'Home', icon: Icons.dashboard_outlined, selectedIcon: Icons.dashboard_rounded),
   (label: 'Opportunities', icon: Icons.work_outline_rounded, selectedIcon: Icons.work_rounded),
   (label: 'Advisory', icon: Icons.forum_outlined, selectedIcon: Icons.forum_rounded),
   (label: 'Network', icon: Icons.groups_outlined, selectedIcon: Icons.groups_rounded),
@@ -244,7 +242,6 @@ class _ShellBody extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     const pages = [
-      OverviewPage(),
       OpportunitiesPage(),
       AdvisoryPage(),
       NetworkPage(),

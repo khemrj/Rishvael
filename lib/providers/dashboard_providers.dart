@@ -8,6 +8,7 @@ import '../core/api_failure.dart';
 import '../models/user_profile.dart';
 import '../data/dashboard_repository.dart';
 import '../models/feed_models.dart';
+import '../models/opportunity_model.dart';
 
 /// ===========================================================================
 /// 1. DEPENDENCY INJECTION — providers are your service locator, but typed,
