@@ -193,6 +193,7 @@ class _LoginPageState extends State<LoginPage> {
                   ),
                   const SizedBox(height: 6),
                   TextFormField(
+                   
                     controller: _emailController,
                     keyboardType: TextInputType.emailAddress,
                     textInputAction: TextInputAction.next,
@@ -231,13 +232,15 @@ class _LoginPageState extends State<LoginPage> {
                   ),
                   const SizedBox(height: 6),
                   TextFormField(
+                  
                     controller: _passwordController,
                     obscureText: !_passwordVisible,
                     textInputAction: TextInputAction.done,
                     enabled: !_isLoading,
                     onFieldSubmitted: (_) => _login(),
                     decoration: InputDecoration(
-                      hintText: 'Enter your password',
+                    ///  hintText: 'Enter your password',
+
                       prefixIcon: const Icon(Icons.lock_outlined),
                       suffixIcon: IconButton(
                         icon: Icon(

@@ -229,7 +229,7 @@ Future<void> _settle(Future<Object?> future) async {
   try {
     await future;
   } catch (_) {
-    /* handled by the individual card */
+    
   }
 }
 

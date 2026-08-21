@@ -30,7 +30,7 @@ class ApiClient {
   // --------------------------------------------------------------------------
 
   /// Build-time override:
-  ///   flutter run --dart-define=API_BASE_URL=http://192.168.1.5:8080
+  ///   flutter run -d RFCRA043GZJ --dart-define=API_BASE_URL=http://192.168.1.8:8080
   ///   flutter build apk --dart-define=API_BASE_URL=https://api.rishvael.com
   ///
   /// A hardcoded LAN IP compiles fine and then dies in production — this is the

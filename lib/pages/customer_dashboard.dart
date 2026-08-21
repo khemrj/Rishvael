@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -6,6 +7,7 @@ import 'login_page.dart';
 
 import '../core/responsive.dart';
 import '../core/app_theme.dart';
+import '../models/opportunity_model.dart';
 import 'profile/profile_page.dart';
 import 'profile/widgets/member_avatar.dart';
 import '../providers/dashboard_providers.dart';
@@ -13,6 +15,7 @@ import 'dashboard/advisory_page.dart';
 import 'dashboard/network_page.dart';
 import 'dashboard/opportunities_page.dart';
 import 'dashboard/overview_page.dart';
+import '../pages/post_opportunity_page.dart';
 
 /// A record type (Dart 3): a tuple with named fields, no class boilerplate.8
 /// Perfect for config lists that never leave this file.
@@ -50,28 +53,83 @@ class _CustomerDashboardState extends ConsumerState<CustomerDashboard> {
       (route) => false,
     );
   }
+  Future<bool> _showLogoutDialog() async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Confirm Logout'),
+        content: const Text('Do you want to log out?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Logout'),
+          ),
+        ],
+      ),
+    );
+    return confirm ?? false;
+  }
 
   void _go(int i) {
     if (i != _index) setState(() => _index = i);
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final size = context.breakpoint;
+  /// DEV-ONLY: opens the business "post an opportunity" form from the
+  /// customer dashboard so you can smoke-test the POST /opportunities
+  /// endpoint from your phone without switching accounts. Gated on
+  /// kDebugMode — this is stripped from release builds automatically and
+  /// will never show up for a real customer.
+  Future<void> _openPostOpportunityDebugTool() async {
+    final result = await Navigator.of(context).push<Opportunity>(
+      MaterialPageRoute(builder: (_) => const PostOpportunityPage()),
+    );
+    if (!mounted) return;
+    if (result != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Backend confirmed: "${result.title}" (id: ${result.id}) created.')),
+      );
+    }
+    // No snackbar on a null/cancelled result — PostOpportunityPage already
+    // surfaces its own errors inline, so there's nothing new to say here.
+  }
 
-    // ONE decision, made once, at the shell. Every page below is
-    // breakpoint-agnostic — it just fills the space it's given.
-    //
-    //   compact   phone            → bottom bar (thumb reach)
-    //   medium    landscape/fold   → icon rail (vertical space is scarce)
-    //   expanded  tablet           → extended rail (labels fit)
-    //   large+    desktop          → permanent drawer (pointer, not thumb)
-    final body = _ShellBody(index: _index);
+  Widget? _buildDebugFab() {
+    if (!kDebugMode) return null;
+    return FloatingActionButton.extended(
+      heroTag: 'debug_post_opportunity_fab',
+      onPressed: _openPostOpportunityDebugTool,
+      icon: const Icon(Icons.bug_report_outlined),
+      label: const Text('Test POST'),
+    );
+  }
 
-    return switch (size) {
+ @override
+Widget build(BuildContext context) {
+  final size = context.breakpoint;
+  
+  // ONE decision, made once, at the shell. Every page below is
+  // breakpoint-agnostic — it just fills the space it's given.
+  final body = _ShellBody(index: _index);
+
+  // Wrap the entire layout in PopScope to intercept the back gesture
+  return PopScope(
+    canPop: false, // Stops default back/swipe behavior
+    onPopInvokedWithResult: (bool didPop, Object? result) {
+      if (didPop) return; 
+      
+      // Fires when back gesture is swiped. 
+      // Calls your existing dialog handler.
+      _showLogoutDialog();
+    },
+    child: switch (size) {
       WindowSize.compact => Scaffold(
           appBar: _buildAppBar(context, showTitle: true),
           body: SafeArea(child: body),
+          floatingActionButton: _buildDebugFab(),
           bottomNavigationBar: NavigationBar(
             selectedIndex: _index,
             onDestinationSelected: _go,
@@ -93,11 +151,9 @@ class _CustomerDashboardState extends ConsumerState<CustomerDashboard> {
                 NavigationRail(
                   selectedIndex: _index,
                   onDestinationSelected: _go,
-                  // Extended rail needs ~256px of its own. Below `expanded`
-                  // it would eat the content, so we collapse to icons.
                   extended: size.atLeastExpanded,
                   labelType: size.atLeastExpanded
-                      ? null // MUST be null when extended, or Flutter asserts
+                      ? null 
                       : NavigationRailLabelType.selected,
                   leading: const SizedBox(height: 8),
                   destinations: [
@@ -110,10 +166,11 @@ class _CustomerDashboardState extends ConsumerState<CustomerDashboard> {
                   ],
                 ),
                 const VerticalDivider(width: 1),
-                Expanded(child: body), // Expanded: give the rest to content
+                Expanded(child: body), 
               ],
             ),
           ),
+          floatingActionButton: _buildDebugFab(),
         ),
       _ => Scaffold(
           body: SafeArea(
@@ -124,11 +181,9 @@ class _CustomerDashboardState extends ConsumerState<CustomerDashboard> {
                 Expanded(
                   child: Column(
                     children: [
-                      // On desktop the "app bar" is a content header, not a
-                      // system chrome bar — no elevation, no back button.
                       _DesktopHeader(
                         title: _destinations[_index].label,
-                        onSignOut: _signOut,
+                        onSignOut: _signOut, // Alternatively hook this into the same dialog
                         onOpenProfile: () => _go(4),
                       ),
                       Expanded(child: body),
@@ -138,9 +193,11 @@ class _CustomerDashboardState extends ConsumerState<CustomerDashboard> {
               ],
             ),
           ),
+          floatingActionButton: _buildDebugFab(),
         ),
-    };
-  }
+    },
+  );
+}
 
   PreferredSizeWidget _buildAppBar(BuildContext context, {bool showTitle = true}) {
     return AppBar(

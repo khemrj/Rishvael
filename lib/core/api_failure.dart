@@ -39,7 +39,10 @@ sealed class ApiFailure implements Exception {
 
   static ApiFailure _fromStatus(Response<dynamic>? res) {
     final code = res?.statusCode ?? 0;
-    // Backend contract: { "message": "...", "errors": { "field": "reason" } }
+    // Backend contract (GlobalExceptionHandler.handleValidationErrors):
+    // { "success": false, "message": "Validation failed",
+    //   "fieldErrors": { "field": "reason" } }
+    // Field is literally named "fieldErrors", not "errors".
     final body = res?.data is Map<String, dynamic>
         ? res!.data as Map<String, dynamic>
         : const <String, dynamic>{};
@@ -52,7 +55,7 @@ sealed class ApiFailure implements Exception {
       409 => ConflictFailure(serverMessage ?? 'That already exists.'),
       422 || 400 => ValidationFailure(
           serverMessage ?? 'Please check the highlighted fields.',
-          fieldErrors: switch (body['errors']) {
+          fieldErrors: switch (body['fieldErrors']) {
             final Map<String, dynamic> m =>
               m.map((k, v) => MapEntry(k, '$v')),
             _ => const {},
