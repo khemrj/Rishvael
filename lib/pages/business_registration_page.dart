@@ -2,12 +2,12 @@ import 'package:csc_picker/csc_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../core/responsive.dart';
-import '../../models/address.dart';
-import '../../models/business.dart';
-import '../../providers/business_provider.dart';
+import '../core/responsive.dart';
+import '../models/address.dart';
+import '../models/business.dart';
+import '../providers/business_provider.dart';
 // TODO: point this at your actual login page location.
-// import '../auth/login_page.dart';
+// import 'login_page.dart';
 
 /// Business/firm self-registration — creates a ROLE_BUSINESS User + a
 /// pending Business profile together. On success, routes to login (this

@@ -1,16 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_application_1/pages/login_page.dart';
+import 'package:flutter_application_1/pages/signup_page.dart';
 
-import '../../core/responsive.dart';
-import '../pages/business_registration_page.dart';
+import '../core/responsive.dart';
+import 'business_registration_page.dart';
 // TODO: point these at your actual pages.
-// import '../auth/signup_page.dart';   // Job Seeker → existing customer signup
-// import '../auth/login_page.dart';    // "Already have an account?" link
+// import 'signup_page.dart';   // Job Seeker → existing customer signup
+// import 'login_page.dart';    // "Already have an account?" link
 
 /// First screen the app shows on a fresh, unauthenticated launch — NOT on
-/// every launch. Wire this as the destination only when there's no stored
-/// token yet (check ApiClient.readToken() during your app bootstrap, before
-/// deciding between this screen and skipping straight to the dashboard).
-/// A returning logged-in user should never see a role chooser again.
+/// every launch. See AppBootstrap in main.dart: this is only reached when
+/// there's no stored token. A returning logged-in user never sees this.
 class RoleSelectionPage extends StatelessWidget {
   const RoleSelectionPage({super.key});
 
@@ -61,11 +61,12 @@ class RoleSelectionPage extends StatelessWidget {
                 SizedBox(height: Insets.xl),
                 TextButton(
                   onPressed: () {
-                    // Navigator.of(context).push(
-                    //   MaterialPageRoute(builder: (_) => const LoginPage()),
-                    // );
+                     Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const LoginPage()),
+                     );
                   },
                   child: const Text('Already have an account? Log in'),
+          
                 ),
               ],
             ),
@@ -81,9 +82,9 @@ class RoleSelectionPage extends StatelessWidget {
           title: 'Job Seeker',
           subtitle: 'Find and apply to finance opportunities',
           onTap: () {
-            // Navigator.of(context).push(
-            //   MaterialPageRoute(builder: (_) => const SignupPage()),
-            // );
+            Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const SignupPage()),
+            );
           },
         ),
         _RoleOption(

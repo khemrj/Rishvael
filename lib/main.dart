@@ -6,6 +6,9 @@ import 'core/app_theme.dart';
 import 'core/deep_link_handler.dart';
 import 'core/responsive.dart';
 import 'pages/login_page.dart';
+import 'pages/role_selection_page.dart';
+// TODO: import your actual dashboard page and swap it in below.
+// import 'pages/customer_dashboard_page.dart';
 
 // Global navigator key — lets DeepLinkHandler navigate from outside
 // any widget's build context (e.g. when a reset link is tapped).
@@ -58,7 +61,37 @@ class _MyAppState extends State<MyApp> {
         ),
         child: child!,
       ),
-      home: const LoginPage(),
+      home: const AppBootstrap(),
+    );
+  }
+}
+
+/// Decides the first screen the user actually sees:
+///   - stored token present  → straight into the app (dashboard)
+///   - no stored token       → RoleSelectionPage (Job Seeker / Business / Advisor)
+///
+/// A stale/expired token still gets through this check — that's fine, it's
+/// not this widget's job to validate it. The existing ApiClient 401→refresh
+/// flow (and onSessionExpired above) already bounces the user back to
+/// LoginPage if the token turns out to be dead.
+class AppBootstrap extends StatelessWidget {
+  const AppBootstrap({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<String?>(
+      future: ApiClient.readToken(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState != ConnectionState.done) {
+          return const Scaffold(body: Center(child: CircularProgressIndicator()));
+        }
+        final hasToken = snapshot.data != null;
+        if (hasToken) {
+          // TODO: replace with your real dashboard widget.
+          return const Placeholder(); // e.g. const CustomerDashboardPage()
+        }
+        return const RoleSelectionPage();
+      },
     );
   }
 }
