@@ -12,7 +12,7 @@ class OpportunityRepository {
 
   Future<Opportunity> publish(OpportunityDraft draft) => _post(_basePath, draft);
 
-  Future<Opportunity> saveDraft(OpportunityDraft draft) => _post('$_basePath/draft', draft);
+  Future<Opportunity> saveDraft(OpportunityDraft draft) => _post('_basePath/draft', draft);
 
 }Future<Opportunity> _post(String path, OpportunityDraft draft) async {
   try {

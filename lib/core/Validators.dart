@@ -1,4 +1,4 @@
-class Validators {
+class validators {
   static String? username(String? value) {
     final v = (value ?? '').trim();
     if (v.isEmpty) return 'Username is required';

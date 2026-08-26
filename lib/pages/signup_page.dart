@@ -71,14 +71,14 @@ class _SignupPageState extends State<SignupPage> {
                 TextFormField(
                   controller: _username,
                   decoration: const InputDecoration(labelText: 'Username'),
-                  validator: Validators.username,
+                  validator: validators.username,
                 ),
                 const SizedBox(height: 16),
                 TextFormField(
                   controller: _email,
                   keyboardType: TextInputType.emailAddress,
                   decoration: const InputDecoration(labelText: 'Email'),
-                  validator: Validators.email,
+                  validator: validators.email,
                 ),
                 const SizedBox(height: 16),
                 TextFormField(
@@ -91,14 +91,14 @@ class _SignupPageState extends State<SignupPage> {
                       onPressed: () => setState(() => _obscure = !_obscure),
                     ),
                   ),
-                  validator: Validators.password,
+                  validator: validators.password,
                 ),
                 const SizedBox(height: 16),
                 TextFormField(
                   controller: _confirm,
                   obscureText: _obscure,
                   decoration: const InputDecoration(labelText: 'Confirm password'),
-                  validator: (v) => Validators.confirmPassword(v, _password.text),
+                  validator: (v) => validators.confirmPassword(v, _password.text),
                 ),
                 const SizedBox(height: 24),
                 FilledButton(

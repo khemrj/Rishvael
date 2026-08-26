@@ -41,7 +41,7 @@ class _CustomerDashboardState extends ConsumerState<CustomerDashboard> {
   /// Your original logout, kept verbatim in spirit: clear the token, then wipe
   /// the navigation stack so back can't return to an authenticated screen.
   Future<void> _signOut() async {
-    final navigator = Navigator.of(context); // capture BEFORE the await
+   final navigator = Navigator.of(context, rootNavigator: true); // capture BEFORE the await
     await ApiClient.clearToken();
     // Drop every cached provider so the next user never sees this one's data.
     ref.invalidate(profileProvider);

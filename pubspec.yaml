@@ -39,6 +39,7 @@ dependencies:
   cupertino_icons: ^1.0.8
   app_links: ^7.2.1
   flutter_riverpod: ^2.6.1
+  csc_picker: ^0.2.7
 
 dev_dependencies:
   flutter_test:
