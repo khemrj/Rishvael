@@ -1,49 +1,49 @@
-import 'package:dio/dio.dart';
-import 'package:flutter_application_1/core/api_client.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../core/api_failure.dart';
+import '../core/api_service.dart';
 import '../models/opportunity_model.dart';
 
 class OpportunityRepository {
-  const OpportunityRepository();
+  const OpportunityRepository(this._api);
+  final ApiService _api;
 
   static const _basePath = '/api/v1/opportunities';
 
-  Future<Opportunity> publish(OpportunityDraft draft) => _post(_basePath, draft);
+  Future<Opportunity> publish(OpportunityDraft draft) => _api.post<Opportunity>(
+        _basePath,
+        data: draft.toJson(),
+        fromJson: (json) => Opportunity.fromJson(json as Map<String, dynamic>),
+      );
 
-  Future<Opportunity> saveDraft(OpportunityDraft draft) => _post('_basePath/draft', draft);
+  Future<Opportunity> saveDraft(OpportunityDraft draft) => _api.post<Opportunity>(
+        '$_basePath/draft',
+        data: draft.toJson(),
+        fromJson: (json) => Opportunity.fromJson(json as Map<String, dynamic>),
+      );
 
-}Future<Opportunity> _post(String path, OpportunityDraft draft) async {
-  try {
-    final res = await ApiClient.dio.post<Map<String, dynamic>>(
-      path,
-      data: draft.toJson(),
-      options: ApiClient.strict,
-    );
+  Future<Opportunity> getById(String id) => _api.get<Opportunity>(
+        '$_basePath/$id',
+        fromJson: (json) => Opportunity.fromJson(json as Map<String, dynamic>),
+      );
 
-    final body = res.data;
-    if (body == null) {
-      throw const ServerFailure('Empty response from server.');
-    }
+  Future<List<Opportunity>> list({Map<String, dynamic>? query}) => _api.get<List<Opportunity>>(
+        _basePath,
+        queryParameters: query,
+        fromJson: (json) =>
+            (json as List).map((e) => Opportunity.fromJson(e as Map<String, dynamic>)).toList(),
+      );
 
-    // Backend wraps every response as { success, message, data, timestamp }.
-    // The actual opportunity lives one level down in `data`.
-    final success = body['success'] as bool? ?? false;
-    if (!success) {
-      throw UnknownFailure(body['message'] as String? ?? 'Request failed.');
-    }
+  Future<Opportunity> update(String id, OpportunityDraft draft) => _api.patch<Opportunity>(
+        '$_basePath/$id',
+        data: draft.toJson(),
+        fromJson: (json) => Opportunity.fromJson(json as Map<String, dynamic>),
+      );
 
-    final data = body['data'];
-    if (data is! Map<String, dynamic>) {
-      throw const ServerFailure('Server response was missing the expected data.');
-    }
-
-    return Opportunity.fromJson(data);
-  } on DioException catch (e) {
-    throw ApiFailure.from(e);
-  }
+  Future<void> delete(String id) => _api.deleteNoContent('$_basePath/$id');
 }
+
+final apiServiceProvider = Provider<ApiService>((ref) => const ApiService());
+
 final opportunityRepositoryProvider = Provider<OpportunityRepository>((ref) {
-  return const OpportunityRepository();
+  return OpportunityRepository(ref.watch(apiServiceProvider));
 });

@@ -27,7 +27,8 @@ class DashboardRepository {
 
   Future<UserProfile> fetchProfile({CancelToken? cancel}) =>
       _get('/api/v1/me', cancel, (data) => UserProfile.fromJson(data as Map<String, dynamic>));
-
+//
+//this is method that fetches opportunities from backend
 Future<List<T>> _getList<T>(
   String path,
   CancelToken? cancel,
@@ -39,7 +40,9 @@ Future<List<T>> _getList<T>(
 
   final List<dynamic> rawList = switch (body) {
     List() => body,
-    {'data': List<dynamic>() && final data} => data, // your {success, message, data, timestamp} envelope
+    {'data': List<dynamic>() && final data} => data,
+    // Paginated envelope: { success, message, data: { content: [...], pageNumber, ... }, timestamp }
+    {'data': {'content': List<dynamic>() && final content}} => content,
     _ => throw FormatException('Unexpected list shape for $path: ${body.runtimeType}'),
   };
 

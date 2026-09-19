@@ -1,9 +1,10 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 
 /// One closed family of errors the UI is allowed to see.
 ///
 /// `sealed` = the compiler knows every subtype lives in THIS file.
-/// That is what makes `switch` exhaustive: forget a case and you get a
+/// That is what makes `switch` exhaus8tive: forget a case and you get a
 /// compile error, not a 3am crash. Never let a raw `DioException` reach a
 /// widget — widgets should never know what HTTP is.
 sealed class ApiFailure implements Exception {
@@ -18,7 +19,11 @@ sealed class ApiFailure implements Exception {
   /// The single funnel: every raw error becomes a typed failure here.
   static ApiFailure from(Object error) {
     if (error is ApiFailure) return error;
-    if (error is! DioException) return UnknownFailure('$error');
+    if (error is! DioException) {
+      if (kDebugMode) debugPrint('ApiFailure.from: unexpected error → $error');
+      return const UnknownFailure('Something unexpected happened.');
+    }
+    // ...unchanged switch below
 
     return switch (error.type) {
       DioExceptionType.connectionTimeout ||
@@ -99,6 +104,10 @@ final class RateLimitedFailure extends ApiFailure {
 
 final class ServerFailure extends ApiFailure {
   const ServerFailure([super.message = 'Something broke on our side.']);
+}
+
+final class ParsingFailure extends ApiFailure {
+  const ParsingFailure([super.message = 'We had trouble reading the server response.']);
 }
 
 /// Not an error the user caused — a request we deliberately aborted.

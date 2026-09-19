@@ -7,7 +7,9 @@
         {
             "name": "flutter_application_1",
             "request": "launch",
-            "type": "dart"
+            "type": "dart",
+            "deviceId": "RFCRA043GZJ",
+            "args" : ["--dart-define=API_BASE_URL=http://192.168.1.7:8080"]
         },
         {
             "name": "flutter_application_1 (profile mode)",

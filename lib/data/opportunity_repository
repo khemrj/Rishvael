@@ -1,0 +1,19 @@
+class OpportunityRepository{
+    OpportunityRepository(this._client );
+    final ApiClient _client;
+    Dio get _dio => ApiClient.dio;
+    Future<List<Opportunity>> fetchOpportunities({
+    OpportunityKind? kind,
+    String? query,
+    CancelToken? cancel,
+  }) =>
+      _getList(
+        '/api/v1/opportunities',
+        cancel,
+        Opportunity.fromJson,
+        query: {
+          if (kind != null) 'kind': kind.wire,
+          if (query != null && query.isNotEmpty) 'q': query,
+        },
+      );
+}

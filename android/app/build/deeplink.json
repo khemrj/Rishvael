@@ -1,0 +1,1 @@
+{"applicationId":"com.example.flutter_application_1","deeplinkingFlagEnabled":false,"deeplinks":[{"scheme":"rishvael","host":"reset-password","path":".*","intentFilterCheck":{"hasAutoVerify":false,"hasActionView":true,"hasDefaultCategory":true,"hasBrowsableCategory":true}}]}

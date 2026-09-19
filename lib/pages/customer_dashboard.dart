@@ -1,12 +1,13 @@
 import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
+import 'package:flutter_application_1/core/theme/app_colors.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/api_client.dart';
 import 'login_page.dart';
 
 import '../core/responsive.dart';
-import '../core/app_theme.dart';
+import '../core/theme/app_theme.dart';
 import '../models/opportunity_model.dart';
 import 'profile/profile_page.dart';
 import 'profile/widgets/member_avatar.dart';
@@ -51,27 +52,47 @@ class _CustomerDashboardState extends ConsumerState<CustomerDashboard> {
       (route) => false,
     );
   }
-  Future<bool> _showLogoutDialog() async {
+Future<bool> _showLogoutDialog() async {
     final confirm = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         title: const Text('Confirm Logout'),
         content: const Text('Do you want to log out?'),
         actions: [
           TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
+            onPressed: () => Navigator.of(dialogContext).pop(false),
             child: const Text('Cancel'),
           ),
           FilledButton(
-            onPressed: () => Navigator.of(context).pop(true),
+            onPressed: () => Navigator.of(dialogContext).pop(true),
             child: const Text('Logout'),
           ),
         ],
       ),
     );
+
     return confirm ?? false;
   }
 
+Future<void> _handleLogoutSequence() async {
+    final shouldLogout = await _showLogoutDialog();
+    final navigator = Navigator.of(context, rootNavigator: true);
+    if (shouldLogout) {
+      // 1. Perform your actual logout logic (API calls, clearing local storage, etc.)
+      // await AuthService.to.logout();
+
+      // 2. Always verify the widget is still mounted before using context after an async gap
+      if (!mounted) return;
+
+      // 3. Clear the entire navigation stack and push the user to the login screen
+     if (!mounted) return;
+
+  await navigator.pushAndRemoveUntil(
+    MaterialPageRoute<void>(builder: (_) => const LoginPage()),
+    (route) => false,
+  );
+    }
+  }
   void _go(int i) {
     if (i != _index) setState(() => _index = i);
   }
@@ -115,14 +136,13 @@ Widget build(BuildContext context) {
 
   // Wrap the entire layout in PopScope to intercept the back gesture
   return PopScope(
-    canPop: false, // Stops default back/swipe behavior
-    onPopInvokedWithResult: (bool didPop, Object? result) {
-      if (didPop) return; 
-      
-      // Fires when back gesture is swiped. 
-      // Calls your existing dialog handler.
-      _showLogoutDialog();
-    },
+      canPop: false, // Prevents default back gesture or physical button behavior
+      onPopInvokedWithResult: (bool didPop, Object? result) async {
+        if (didPop) return;
+
+        // Triggers the async logout sequence when back swipe/button is used
+        await _handleLogoutSequence();
+      },
     child: switch (size) {
       WindowSize.compact => Scaffold(
           appBar: _buildAppBar(context, showTitle: true),
@@ -282,13 +302,13 @@ class _PermanentDrawer extends ConsumerWidget {
                   height: 32,
                   alignment: Alignment.center,
                   decoration: const BoxDecoration(
-                    color: Brand.navy,
+                    color: AppColors.gold,
                     borderRadius: Radii.chip,
                   ),
                   child: const Text('R',
                       style: TextStyle(
-                          color: Brand.gold,
-                          fontFamily: Brand.display,
+                          color: AppColors.gold,
+              
                           fontWeight: FontWeight.w700)),
                 ),
                 const SizedBox(width: 12),
@@ -345,7 +365,7 @@ class _CompletionNudge extends StatelessWidget {
   Widget build(BuildContext context) {
     final t = Theme.of(context).textTheme;
     return Material(
-      color: Brand.gold.withValues(alpha: 0.10),
+      color: AppColors.gold.withValues(alpha: 0.10),
       borderRadius: Radii.card,
       child: InkWell(
         borderRadius: Radii.card,
@@ -363,8 +383,8 @@ class _CompletionNudge extends StatelessWidget {
                 child: LinearProgressIndicator(
                   value: value,
                   minHeight: 5,
-                  color: Brand.gold,
-                  backgroundColor: Brand.gold.withValues(alpha: 0.25),
+                  color: AppColors.gold,
+                  backgroundColor: AppColors.gold.withValues(alpha: 0.25),
                 ),
               ),
               if (message != null) ...[

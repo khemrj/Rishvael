@@ -25,6 +25,7 @@ final businessRegistrationControllerProvider =
 );
 
 /// The logged-in business's own profile. Watch `.canPostOpportunities` on
+//final businessRegistrationControllerProvider AsyncNotifierProvider<BusinessRegistrationContriller,Business
 /// the result to gate the "Post Opportunity" action anywhere in the app —
 /// e.g. `ref.watch(myBusinessProvider).valueOrNull?.canPostOpportunities`.
 final myBusinessProvider = FutureProvider<Business>((ref) {

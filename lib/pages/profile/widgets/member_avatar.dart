@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_application_1/core/theme/app_colors.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../core/app_theme.dart';
+import '../../../core/theme/app_theme.dart';
 import '../../../providers/dashboard_providers.dart';
 
 class MemberAvatar extends StatelessWidget {
@@ -31,7 +32,7 @@ class MemberAvatar extends StatelessWidget {
 
     final avatar = CircleAvatar(
       radius: radius,
-      backgroundColor: Brand.navy,
+      backgroundColor: AppColors.navy,
       backgroundImage: (imageUrl != null && imageUrl!.isNotEmpty)
           ? NetworkImage(imageUrl!)
           : null,
@@ -39,7 +40,7 @@ class MemberAvatar extends StatelessWidget {
           ? Text(
               initials,
               style: TextStyle(
-                color: Brand.gold,
+                color: AppColors.gold,
                 fontSize: radius * 0.75,
                 fontWeight: FontWeight.w600,
               ),
@@ -63,7 +64,7 @@ class MemberAvatar extends StatelessWidget {
             ),
             child: Icon(
               Icons.verified_rounded,
-              color: Brand.gold,
+              color: AppColors.gold,
               size: radius * 0.6,
             ),
           ),
@@ -85,7 +86,7 @@ class AccountMenuButton extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final profile = ref.watch(profileProvider.select((p) => p.value));
+    final profile = ref.watch(profileProvider.select((p) => p.value));  // Only rebuild when the profile data changes, not on loading/error states.
     final name = profile?.fullName ?? 'User';
     final avatarUrl = profile?.avatarUrl;
     final isVerified = profile?.isVerified ?? false;

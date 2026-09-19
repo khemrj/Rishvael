@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_application_1/core/theme/app_colors.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/responsive.dart';
 import '../../core/api_failure.dart';
-import '../../core/app_theme.dart';
+import '../../core/theme/app_theme.dart';
 import '../../core/async_view.dart';
 import '../../providers/dashboard_providers.dart';
 import '../dashboard/widgets/section_card.dart';
@@ -219,12 +220,12 @@ class _VerificationBanner extends StatelessWidget {
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         borderRadius: Radii.card,
-        color: Brand.gold.withValues(alpha: 0.10),
-        border: Border.all(color: Brand.gold.withValues(alpha: 0.35)),
+        color: AppColors.gold.withValues(alpha: 0.10),
+        border: Border.all(color: AppColors.gold.withValues(alpha: 0.35)),
       ),
       child: Row(
         children: [
-          const Icon(Icons.verified_outlined, color: Brand.gold),
+          const Icon(Icons.verified_outlined, color: AppColors.gold),
           const SizedBox(width: 12),
           Expanded(
             child: Text(

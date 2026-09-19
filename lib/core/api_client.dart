@@ -10,11 +10,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 /// same way, so login_page / signup_page / forgot_password_page /
 /// reset_password_page / admin_dashboard compile without a single edit:
 ///
-///   ApiClient.dio            ✅ same
-///   ApiClient.baseUrl        ✅ same
-///   ApiClient.saveToken()    ✅ same
-///   ApiClient.readToken()    ✅ same
-///   ApiClient.clearToken()   ✅ same
+///  
 ///
 /// What's new underneath: configurable base URL, token caching, 401 refresh
 /// with a stampede guard, background JSON decoding, and a session CancelToken.
@@ -30,7 +26,7 @@ class ApiClient {
   // --------------------------------------------------------------------------
 
   /// Build-time override:
-  ///   flutter run -d RFCRA043GZJ --dart-define=API_BASE_URL=http://192.168.1.70:8080
+  ///   flutter run -d RFCRA043GZJ --dart-define=API_BASE_URL=http://192.168.1.7:8080
   ///   flutter build apk --dart-define=API_BASE_URL=https://api.rishvael.com
   ///
   /// A hardcoded LAN IP compiles fine and then dies in production — this is the
@@ -67,16 +63,10 @@ class ApiClient {
     final d = Dio(
       BaseOptions(
         baseUrl: baseUrl,
-        connectTimeout: const Duration(seconds: 10),
+        connectTimeout: const Duration(seconds: 5),
         // receiveTimeout is the gap BETWEEN bytes, not total download time.
         receiveTimeout: const Duration(seconds: 20),
         headers: {'Content-Type': 'application/json'},
-
-        // KEPT AS YOU HAD IT — deliberately.
-        // Flipping this to strict 2xx would be better design, but it would
-        // break every page that currently reads `res.statusCode == 401`.
-        // New code (the repository) opts into strict mode per-request instead.
-        // See MIGRATION.md §3 for how to flip it later, page by page.
         validateStatus: (status) => status != null && status < 500,
       ),
     );
