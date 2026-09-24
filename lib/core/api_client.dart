@@ -3,6 +3,9 @@ import 'dart:async';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:logger/logger.dart';
+
+final Logger log = Logger();
 
 /// DROP-IN REPLACEMENT for your existing core/api_client.dart.
 ///
@@ -83,7 +86,9 @@ class ApiClient {
             final token = await readToken();
             if (token != null) {
               options.headers['Authorization'] = 'Bearer $token';
+              if (kDebugMode) log.e('token is fetched from readToken: $token');
             }
+            
           }
           handler.next(options);
         },

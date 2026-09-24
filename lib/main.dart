@@ -4,6 +4,7 @@ import 'package:flutter_application_1/pages/business_dashboard.dart';
 import 'package:flutter_application_1/pages/dashboard/dashboard_router.dart';
 import 'package:flutter_application_1/pages/error_page.dart';
 import 'package:flutter_application_1/pages/members/public_profile_page.dart';
+import 'package:flutter_application_1/pages/role_selection_page.dart';
 import 'package:flutter_application_1/pages/splash_screen.dart';
 import 'package:flutter_application_1/providers/AuthNotifier.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -99,59 +100,16 @@ class AppBootstrap extends ConsumerWidget {
         // The actual fix: authenticated now routes through
         // DashboardRouter, which reads the ALREADY-decoded role off
         // authState — no re-decoding, no duplicate JWT logic anywhere.
-        AuthStatus.authenticated =>
-          DashboardRouter(role: authState.role),
-       AuthStatus.unauthenticated => const PublicProfilePage(
-  profile: PublicProfile(
-    id: 1,
-    name: 'Alex Mercer',
-    headline: 'Finance Analyst · Wealth Management',
-    location: 'Singapore',
-    industry: 'Financial Services',
-    about:
-        'Finance professional focused on portfolio strategy '
-        'and client wealth planning. Four years across '
-        'Asia-Pacific markets.',
-    connections: '248',
-    experienceYears: '4+',
-    openToOpportunities: true,
-    website: 'alexmercer.com',
-    experiences: [
-      ProfessionalExperience(
-        role: 'Senior Wealth Analyst',
-        company: 'Meridian Capital',
-        period: '2024 – Present',
-        description:
-            'Managing investment research, portfolio strategy, '
-            'and client wealth planning across Asia-Pacific markets.',
-      ),
-      ProfessionalExperience(
-        role: 'Financial Analyst',
-        company: 'Atlas Investments',
-        period: '2022 – 2024',
-        description:
-            'Performed financial analysis, market research, '
-            'and portfolio reporting.',
-      ),
-    ],
-    skills: [
-      'Financial Analysis',
-      'Portfolio Management',
-      'Risk Management',
-      'Investment Research',
-      'Wealth Management',
-      'Python',
-      'Data Analysis',
-    ],
-  ),
-),
+        AuthStatus.authenticated =>const RoleSelectionPage(),
+         // DashboardRouter(role: authState.role),
+       AuthStatus.unauthenticated => const RoleSelectionPage(),
         // No stored token has ever existed → first-launch experience,
         // not the login form. A returning user with a dead/expired
         // token still lands on `unauthenticated` above via
         // ApiClient.onSessionExpired, which already routes to
         // LoginPage directly — RoleSelectionPage is correctly reserved
         // for users who have NEVER logged in on this device.
-        AuthStatus.initial => const DashboardScreen(),
+        AuthStatus.initial => const RoleSelectionPage(),
       },
     );
   }

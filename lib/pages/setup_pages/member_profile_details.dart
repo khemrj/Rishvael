@@ -1,7 +1,10 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_application_1/core/api_failure.dart';
+import 'package:flutter_application_1/core/api_service.dart';
 import 'package:flutter_application_1/core/media/photo_picker_service.dart';
+import 'package:flutter_application_1/data/member_repository.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -24,8 +27,8 @@ class MemberProfileDetailsPage extends StatefulWidget {
       _MemberProfileDetailsPageState();
 }
 
-class _MemberProfileDetailsPageState
-    extends State<MemberProfileDetailsPage> {
+class _MemberProfileDetailsPageState extends State<MemberProfileDetailsPage> {
+  late final MemberRepository _memberRepository;
   final _formKey = GlobalKey<FormState>();
 
   late final TextEditingController _fullNameController;
@@ -40,7 +43,7 @@ class _MemberProfileDetailsPageState
   void initState() {
     super.initState();
     _loadSavedProfileImage();
-   
+    _memberRepository = MemberRepository(ApiService());
     final data = widget.initialData;
 
     final fullName = [
@@ -48,22 +51,13 @@ class _MemberProfileDetailsPageState
       data.lastName,
     ].whereType<String>().join(' ');
 
-    final location = [
-      data.city,
-      data.country,
-    ].whereType<String>().join(', ');
+    final location = [data.city, data.country].whereType<String>().join(', ');
 
-    _fullNameController = TextEditingController(
-      text: fullName,
-    );
+    _fullNameController = TextEditingController(text: fullName);
 
-    _headlineController = TextEditingController(
-      text: data.headline ?? '',
-    );
+    _headlineController = TextEditingController(text: data.headline ?? '');
 
-    _locationController = TextEditingController(
-      text: location,
-    );
+    _locationController = TextEditingController(text: location);
 
     _profileImagePath = data.profileImagePath;
   }
@@ -93,8 +87,10 @@ class _MemberProfileDetailsPageState
         case PhotoPickSuccess(:final file):
           // 1. Copy to permanent app documents directory
           final appDir = await getApplicationDocumentsDirectory();
-          final permanentFile = await file.copy('${appDir.path}/profile_image_${DateTime.now().millisecondsSinceEpoch}.png');
-          
+          final permanentFile = await file.copy(
+            '${appDir.path}/profile_image_${DateTime.now().millisecondsSinceEpoch}.png',
+          );
+
           // 2. Save the path to SharedPreferences
           final prefs = await SharedPreferences.getInstance();
           await prefs.setString('profile_image_path', permanentFile.path);
@@ -103,7 +99,7 @@ class _MemberProfileDetailsPageState
             _profileImageFile = permanentFile;
             _profileImagePath = permanentFile.path;
           });
-          
+
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
@@ -119,9 +115,9 @@ class _MemberProfileDetailsPageState
 
         case PhotoPickFailure(:final message):
           if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(message)),
-            );
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(SnackBar(content: Text(message)));
           }
           break;
       }
@@ -154,18 +150,14 @@ class _MemberProfileDetailsPageState
     );
   }
 
-  void _finish() {
+  Future<void> _finish() async {
     if (!_formKey.currentState!.validate()) {
       return;
     }
 
-    final nameParts = _splitName(
-      _fullNameController.text.trim(),
-    );
+    final nameParts = _splitName(_fullNameController.text.trim());
 
-    final location = _parseLocation(
-      _locationController.text.trim(),
-    );
+    final location = _parseLocation(_locationController.text.trim());
 
     final data = widget.initialData.copyWith(
       firstName: nameParts.$1,
@@ -176,10 +168,24 @@ class _MemberProfileDetailsPageState
       profileImagePath: _profileImagePath,
     );
 
-    widget.onCompleted?.call(data);
+    try {
+      // Send MemberSetupData to backend
+      final createdMember = await _memberRepository.create(data);
+      if (!mounted) return;
 
-    if (widget.onCompleted == null) {
-     
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Member created successfully.')),
+      );
+
+      // Notify parent only after successful API call
+      widget.onCompleted?.call(createdMember);
+    } catch (e) {
+      if (!mounted) return;
+
+      final failure = e is ApiFailure ? e : ApiFailure.from(e);
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(failure.message)));
     }
   }
 
@@ -197,10 +203,7 @@ class _MemberProfileDetailsPageState
       return (parts.first, '');
     }
 
-    return (
-      parts.first,
-      parts.skip(1).join(' '),
-    );
+    return (parts.first, parts.skip(1).join(' '));
   }
 
   (String, String) _parseLocation(String value) {
@@ -218,10 +221,7 @@ class _MemberProfileDetailsPageState
       return (parts.first, '');
     }
 
-    return (
-      parts.first,
-      parts.skip(1).join(', '),
-    );
+    return (parts.first, parts.skip(1).join(', '));
   }
 
   Future<void> _loadSavedProfileImage() async {
@@ -243,9 +243,9 @@ class _MemberProfileDetailsPageState
   Widget build(BuildContext context) {
     return Theme(
       data: Theme.of(context).copyWith(
-        colorScheme: Theme.of(context).colorScheme.copyWith(
-              primary: AppColors.navy,
-            ),
+        colorScheme: Theme.of(
+          context,
+        ).colorScheme.copyWith(primary: AppColors.navy),
       ),
       child: Scaffold(
         backgroundColor: AppColors.navy,
@@ -253,7 +253,6 @@ class _MemberProfileDetailsPageState
           title: const Text('Profile Details'),
           backgroundColor: Colors.transparent,
           elevation: 0,
-          
         ),
         body: Padding(
           padding: const EdgeInsets.all(16.0),
@@ -271,7 +270,11 @@ class _MemberProfileDetailsPageState
                             ? FileImage(_profileImageFile!) as ImageProvider
                             : null,
                         child: _profileImageFile == null
-                            ? const Icon(Icons.person, size: 50, color: AppColors.navy)
+                            ? const Icon(
+                                Icons.person,
+                                size: 50,
+                                color: AppColors.navy,
+                              )
                             : null,
                       ),
                       if (_isPickingPhoto)
@@ -289,7 +292,10 @@ class _MemberProfileDetailsPageState
                     onPressed: _isPickingPhoto ? null : _pickPhoto,
                     child: const Text(
                       'Change Profile Photo',
-                      style: TextStyle(color: AppColors.ink, fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                        color: AppColors.ink,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
                 ),
@@ -298,20 +304,28 @@ class _MemberProfileDetailsPageState
                   controller: _fullNameController,
                   decoration: InputDecoration(
                     labelText: 'Full Name',
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
                     focusedBorder: const OutlineInputBorder(
-                      borderSide: BorderSide(color: AppColors.navyCard, width: 2),
+                      borderSide: BorderSide(
+                        color: AppColors.navyCard,
+                        width: 2,
+                      ),
                     ),
                   ),
-                  validator: (value) =>
-                      value == null || value.isEmpty ? 'Please enter your name' : null,
+                  validator: (value) => value == null || value.isEmpty
+                      ? 'Please enter your name'
+                      : null,
                 ),
                 const SizedBox(height: 16),
                 TextFormField(
                   controller: _headlineController,
                   decoration: InputDecoration(
                     labelText: 'Headline',
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
                     focusedBorder: const OutlineInputBorder(
                       borderSide: BorderSide(color: AppColors.ink, width: 2),
                     ),
@@ -322,7 +336,9 @@ class _MemberProfileDetailsPageState
                   controller: _locationController,
                   decoration: InputDecoration(
                     labelText: 'Location (City, Country)',
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
                     focusedBorder: const OutlineInputBorder(
                       borderSide: BorderSide(color: AppColors.ink, width: 2),
                     ),

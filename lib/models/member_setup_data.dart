@@ -2,8 +2,10 @@ import 'package:flutter/foundation.dart';
 
 /// Temporary onboarding state.
 ///
-/// This is NOT a JPA/entity equivalent.
-/// It represents the data collected across the member onboarding screens.
+/// This represents the minimum information collected during
+/// member onboarding.
+///
+/// It is NOT a JPA/entity equivalent.
 @immutable
 class MemberSetupData {
   const MemberSetupData({
@@ -27,8 +29,59 @@ class MemberSetupData {
   final String? city;
   final String? country;
 
-  /// Local path before the image is uploaded.
+  /// Local device path before the image is uploaded.
   final String? profileImagePath;
+
+  // ---------------------------------------------------------------------------
+  // JSON
+  // ---------------------------------------------------------------------------
+
+  Map<String, dynamic> toJson() {
+    return {
+      'specializations': specializations.toList(),
+      'openTo': openTo.toList(),
+      'firstName': firstName,
+      'lastName': lastName,
+      'headline': headline,
+      'city': city,
+      'country': country,
+      'profileImagePath': profileImagePath,
+    };
+  }
+
+  factory MemberSetupData.fromJson(
+    Map<String, dynamic> json,
+  ) {
+    return MemberSetupData(
+      specializations: _stringSet(
+        json['specializations'],
+      ),
+      openTo: _stringSet(
+        json['openTo'],
+      ),
+      firstName: json['firstName'] as String?,
+      lastName: json['lastName'] as String?,
+      headline: json['headline'] as String?,
+      city: json['city'] as String?,
+      country: json['country'] as String?,
+      profileImagePath:
+          json['profileImagePath'] as String?,
+    );
+  }
+
+  static Set<String> _stringSet(Object? value) {
+    if (value is! List) {
+      return const {};
+    }
+
+    return value
+        .whereType<String>()
+        .toSet();
+  }
+
+  // ---------------------------------------------------------------------------
+  // COPY
+  // ---------------------------------------------------------------------------
 
   MemberSetupData copyWith({
     Set<String>? specializations,
@@ -41,14 +94,21 @@ class MemberSetupData {
     String? profileImagePath,
   }) {
     return MemberSetupData(
-      specializations: specializations ?? this.specializations,
+      specializations:
+          specializations ?? this.specializations,
       openTo: openTo ?? this.openTo,
-      firstName: firstName ?? this.firstName,
-      lastName: lastName ?? this.lastName,
-      headline: headline ?? this.headline,
-      city: city ?? this.city,
-      country: country ?? this.country,
-      profileImagePath: profileImagePath ?? this.profileImagePath,
+      firstName:
+          firstName ?? this.firstName,
+      lastName:
+          lastName ?? this.lastName,
+      headline:
+          headline ?? this.headline,
+      city:
+          city ?? this.city,
+      country:
+          country ?? this.country,
+      profileImagePath:
+          profileImagePath ?? this.profileImagePath,
     );
   }
 }

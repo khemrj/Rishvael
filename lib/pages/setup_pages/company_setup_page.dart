@@ -1,4 +1,13 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:flutter_application_1/core/api_failure.dart';
+import 'package:flutter_application_1/core/api_service.dart';
+import 'package:flutter_application_1/core/media/photo_picker_service.dart';
+import 'package:flutter_application_1/core/theme/app_colors.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 /// Company Setup Page for members to set up their company details.
 /// Built with modular widgets, responsive constraints, and the Rishvael palette.
@@ -10,7 +19,14 @@ class CompanySetupPage extends StatefulWidget {
 }
 
 class _CompanySetupPageState extends State<CompanySetupPage> {
+
   final _formKey = GlobalKey<FormState>();
+  final ApiService _apiService = ApiService();
+
+  //ispickingphoto guards againt double tap
+  String? _profileImagePath;
+  File? _profileImageFile;
+  bool _isPickingPhoto = false;
 
   // Controllers
   final _companyNameController = TextEditingController();
@@ -25,29 +41,30 @@ class _CompanySetupPageState extends State<CompanySetupPage> {
   static const Color cardBackgroundColor = Color(0xFF10192A);
   static const Color goldPrimary = Color(0xFFD4AF37);
   static const Color goldDark = Color(0xFF9A7B2C);
-  static const Color goldSubtle = Color(0x40C5A059);
   static const Color fieldBorderColor = Color(0xFF1E2B42);
   static const Color labelTextColor = Color(0xFF8A99AD);
   static const Color hintTextColor = Color(0xFF4A5970);
 
   // Options
   final List<String> _industries = [
-    'Technology & Software',
-    'E-Commerce & Retail',
-    'Finance & Banking',
-    'Healthcare & Biotech',
-    'Education & EdTech',
-    'Real Estate',
-    'Marketing & Advertising',
-    'Other',
+     "BANKING",
+    "INSURANCE",
+    "INVESTMENT_MANAGEMENT",
+    "MICROFINANCE",
+    "FINTECH",
+    "ACCOUNTING_AUDIT",
+    "STOCK_BROKERAGE",
+    "NBFI",          // Non-Banking Financial Institution — common in Nepal's finance sector
+    "COOPERATIVE",
+    "OTHER",
   ];
 
   final List<String> _companySizes = [
-    '1–10 employees',
-    '11–50 employees',
-    '51–200 employees',
-    '201–500 employees',
-    '500+ employees',
+    "STARTUP ",
+    "SMALL",
+    "MEDIUM",
+    "LARGE",
+    "ENTERPRISE"
   ];
 
   @override
@@ -57,17 +74,146 @@ class _CompanySetupPageState extends State<CompanySetupPage> {
     super.dispose();
   }
 
-  void _onContinue() {
-    if (_formKey.currentState!.validate()) {
-      // Process company setup logic here
+  @override
+  void initState() {
+    super.initState();
+    _loadSavedCompanyLogo();
+  }
+
+  Future<void> _onContinue() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    final data = <String, dynamic>{
+      'companyName': _companyNameController.text.trim(),
+      'industryType': _selectedIndustry,
+      'companySize': _selectedCompanySize,
+      'location': _locationController.text.trim(),
+    };
+
+    try {
+      await _apiService.post<Map<String, dynamic>>(
+        '/api/v1/businesses/register',
+        data: data,
+        fromJson: (json) => json is Map
+            ? Map<String, dynamic>.from(json)
+            : <String, dynamic>{},
+      );
+
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Company details saved successfully!'),
           backgroundColor: goldDark,
         ),
       );
+    } on ApiFailure catch (failure) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(failure.message)),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not save company details: $error')),
+      );
     }
   }
+
+  Future<void> _pickPhoto() async {
+    if (_isPickingPhoto) return; // Guards against double-taps
+
+    final source = await _showSourceSheet();
+    if (source == null || !mounted) return;
+
+    setState(() => _isPickingPhoto = true);
+
+    try {
+      final result = await PhotoPickerService.pick(source: source);
+
+      if (!mounted) return;
+
+      switch (result) {
+        case PhotoPickSuccess(:final file):
+          // 1. Copy to permanent app documents directory
+          final appDir = await getApplicationDocumentsDirectory();
+          final permanentFile = await file.copy(
+            '${appDir.path}/profile_image_${DateTime.now().millisecondsSinceEpoch}.png',
+          );
+
+          // 2. Save the path to SharedPreferences
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setString('company_logo_path', permanentFile.path);
+
+          setState(() {
+            _profileImageFile = permanentFile;
+            _profileImagePath = permanentFile.path;
+          });
+
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Saved to: ${_profileImageFile?.path}'),
+                duration: const Duration(seconds: 3),
+              ),
+            );
+          }
+          break;
+
+        case PhotoPickCancelled():
+          break; // User backed out — nothing to change
+
+        case PhotoPickFailure(:final message):
+          if (mounted) {
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(SnackBar(content: Text(message)));
+          }
+          break;
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isPickingPhoto = false);
+      }
+    }
+  }
+
+  Future<void> _loadSavedCompanyLogo() async {
+    final prefs = await SharedPreferences.getInstance();
+    final savedPath = prefs.getString('company_logo_path');
+
+    if (savedPath == null) return;
+
+    final savedFile = File(savedPath);
+    if (await savedFile.exists() && mounted) {
+      setState(() {
+        _profileImagePath = savedPath;
+        _profileImageFile = savedFile;
+      });
+    }
+  }
+
+  Future<ImageSource?> _showSourceSheet() async {
+    return showModalBottomSheet<ImageSource>(
+      context: context,
+      builder: (context) => SafeArea(
+        child: Wrap(
+          children: [
+            ListTile(
+              leading: const Icon(Icons.camera_alt, color: AppColors.ink),
+              title: const Text('Take a Photo'),
+              onTap: () => Navigator.of(context).pop(ImageSource.camera),
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library, color: AppColors.error),
+              title: const Text('Choose from Gallery'),
+              onTap: () => Navigator.of(context).pop(ImageSource.gallery),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+  
 
   @override
   Widget build(BuildContext context) {
@@ -121,7 +267,13 @@ class _CompanySetupPageState extends State<CompanySetupPage> {
                     const SizedBox(height: 28),
 
                     // Logo Upload Container
-                    const Center(child: _LogoUploader()),
+                    Center(
+                      child: _LogoUploader(
+                        imageFile: _profileImageFile,
+                        isPickingPhoto: _isPickingPhoto,
+                        onTap: _isPickingPhoto ? null : _pickPhoto,
+                      ),
+                    ),
 
                     const SizedBox(height: 32),
 
@@ -306,14 +458,20 @@ class _FieldLabel extends StatelessWidget {
 
 /// Dashed logo uploader box widget
 class _LogoUploader extends StatelessWidget {
-  const _LogoUploader();
+  const _LogoUploader({
+    required this.imageFile,
+    required this.isPickingPhoto,
+    required this.onTap,
+  });
+
+  final File? imageFile;
+  final bool isPickingPhoto;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: () {
-        // TODO: Implement image picker logic
-      },
+      onTap: onTap,
       child: Column(
         children: [
           CustomPaint(
@@ -328,20 +486,38 @@ class _LogoUploader extends StatelessWidget {
               width: 76,
               height: 76,
               alignment: Alignment.center,
-              child: const Icon(
-                Icons.check_box_outline_blank_rounded,
-                color: Colors.white38,
-                size: 24,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(14),
+                image: imageFile == null
+                    ? null
+                    : DecorationImage(
+                        image: FileImage(imageFile!),
+                        fit: BoxFit.cover,
+                      ),
               ),
+              child: isPickingPhoto
+                  ? const CircularProgressIndicator(
+                      color: _CompanySetupPageState.goldPrimary,
+                    )
+                  : imageFile == null
+                      ? const Icon(
+                          Icons.add_photo_alternate_outlined,
+                          color: Colors.white38,
+                          size: 24,
+                        )
+                      : null,
             ),
           ),
           const SizedBox(height: 10),
-          const Text(
-            'Add your logo',
-            style: TextStyle(
-              color: _CompanySetupPageState.labelTextColor,
-              fontSize: 13,
-              fontWeight: FontWeight.w500,
+          GestureDetector(
+            onTap: onTap,
+            child: const Text(
+              'Add your logo',
+              style: TextStyle(
+                color: _CompanySetupPageState.labelTextColor,
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
+              ),
             ),
           ),
         ],

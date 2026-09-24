@@ -28,14 +28,13 @@ sealed class ApiFailure implements Exception {
     return switch (error.type) {
       DioExceptionType.connectionTimeout ||
       DioExceptionType.sendTimeout ||
-      DioExceptionType.receiveTimeout =>
-        const TimeoutFailure(),
+      DioExceptionType.receiveTimeout => const TimeoutFailure(),
       DioExceptionType.cancel => const CancelledFailure(),
       DioExceptionType.connectionError ||
-      DioExceptionType.unknown =>
-        const NetworkFailure(),
-      DioExceptionType.badCertificate =>
-        const NetworkFailure('Could not verify a secure connection.'),
+      DioExceptionType.unknown => const NetworkFailure(),
+      DioExceptionType.badCertificate => const NetworkFailure(
+        'Could not verify a secure connection.',
+      ),
       DioExceptionType.badResponse => _fromStatus(error.response),
       // TODO: Handle this case.
       DioExceptionType.transformTimeout => throw UnimplementedError(),
@@ -59,15 +58,14 @@ sealed class ApiFailure implements Exception {
       404 => const NotFoundFailure(),
       409 => ConflictFailure(serverMessage ?? 'That already exists.'),
       422 || 400 => ValidationFailure(
-          serverMessage ?? 'Please check the highlighted fields.',
-          fieldErrors: switch (body['fieldErrors']) {
-            final Map<String, dynamic> m =>
-              m.map((k, v) => MapEntry(k, '$v')),
-            _ => const {},
-          },
-        ),
+        serverMessage ?? 'Please check the highlighted fields.',
+        fieldErrors: switch (body['fieldErrors']) {
+          final Map<String, dynamic> m => m.map((k, v) => MapEntry(k, '$v')),
+          _ => const {},
+        },
+      ),
       429 => const RateLimitedFailure(),
-      >= 500 => const ServerFailure(),
+      >= 500 => ServerFailure(serverMessage ?? 'Something broke on our side.'),
       _ => UnknownFailure(serverMessage ?? 'Unexpected response ($code).'),
     };
   }
@@ -99,7 +97,9 @@ final class ConflictFailure extends ApiFailure {
 }
 
 final class RateLimitedFailure extends ApiFailure {
-  const RateLimitedFailure([super.message = 'Too many attempts. Wait a moment.']);
+  const RateLimitedFailure([
+    super.message = 'Too many attempts. Wait a moment.',
+  ]);
 }
 
 final class ServerFailure extends ApiFailure {
@@ -107,7 +107,9 @@ final class ServerFailure extends ApiFailure {
 }
 
 final class ParsingFailure extends ApiFailure {
-  const ParsingFailure([super.message = 'We had trouble reading the server response.']);
+  const ParsingFailure([
+    super.message = 'We had trouble reading the server response.',
+  ]);
 }
 
 /// Not an error the user caused — a request we deliberately aborted.
@@ -132,9 +134,9 @@ final class UnknownFailure extends ApiFailure {
 extension ApiFailureX on ApiFailure {
   /// Retrying a 403 is pointless. Retrying a timeout is not.
   bool get isRetryable => switch (this) {
-        NetworkFailure() || TimeoutFailure() || ServerFailure() => true,
-        _ => false,
-      };
+    NetworkFailure() || TimeoutFailure() || ServerFailure() => true,
+    _ => false,
+  };
 
   /// Signal to nuke the token and bounce to login.
   bool get requiresReauth => this is UnauthorizedFailure;

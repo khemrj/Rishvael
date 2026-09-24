@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_application_1/core/theme/app_colors.dart';
 
 
-
 /// Public profile shown to connections, members, and businesses.
 ///
 /// This page is intentionally read-only.

@@ -42,7 +42,7 @@ class OpportunityRepository {
   Future<void> delete(String id) => _api.deleteNoContent('$_basePath/$id');
 }
 
-final apiServiceProvider = Provider<ApiService>((ref) => const ApiService());
+final apiServiceProvider = Provider<ApiService>((ref) => ApiService());
 
 final opportunityRepositoryProvider = Provider<OpportunityRepository>((ref) {
   return OpportunityRepository(ref.watch(apiServiceProvider));
