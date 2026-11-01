@@ -181,7 +181,7 @@ final class ApiService {
           'ApiService: failed to parse response for $T '
           '→ $e\n$st',
         );
-      }
+      }  //
 
       throw const ParsingFailure();
     }

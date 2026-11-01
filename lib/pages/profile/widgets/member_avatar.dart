@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_application_1/core/theme/app_colors.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:flutter_application_1/core/theme/app_colors.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../providers/dashboard_providers.dart';
 
@@ -50,26 +50,32 @@ class MemberAvatar extends StatelessWidget {
 
     if (!verified) return avatar;
 
-    return Stack(
-      children: [
-        avatar,
-        Positioned(
-          right: 0,
-          bottom: 0,
-          child: Container(
-            padding: const EdgeInsets.all(2),
-            decoration: const BoxDecoration(
-              color: Colors.white,
-              shape: BoxShape.circle,
-            ),
-            child: Icon(
-              Icons.verified_rounded,
-              color: AppColors.gold,
-              size: radius * 0.6,
+    // FIX: Constrain the Stack with a SizedBox so it doesn't expand infinitely in a Row/AppBar
+    return SizedBox(
+      width: radius * 2,
+      height: radius * 2,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          avatar,
+          Positioned(
+            right: -2,
+            bottom: -2,
+            child: Container(
+              padding: const EdgeInsets.all(2),
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.verified_rounded,
+                color: AppColors.gold,
+                size: radius * 0.6,
+              ),
             ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }
@@ -86,7 +92,7 @@ class AccountMenuButton extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final profile = ref.watch(profileProvider.select((p) => p.value));  // Only rebuild when the profile data changes, not on loading/error states.
+    final profile = ref.watch(profileProvider.select((p) => p.value));
     final name = profile?.fullName ?? 'User';
     final avatarUrl = profile?.avatarUrl;
     final isVerified = profile?.isVerified ?? false;
@@ -108,10 +114,10 @@ class AccountMenuButton extends ConsumerWidget {
         }
       },
       itemBuilder: (context) => [
-        PopupMenuItem<int>(
+        const PopupMenuItem<int>(
           value: 0,
           child: Row(
-            children: const [
+            children: [
               Icon(Icons.person_outline_rounded, size: 20),
               SizedBox(width: 12),
               Text('Profile'),
@@ -119,10 +125,10 @@ class AccountMenuButton extends ConsumerWidget {
           ),
         ),
         const PopupMenuDivider(),
-        PopupMenuItem<int>(
+        const PopupMenuItem<int>(
           value: 1,
           child: Row(
-            children: const [
+            children: [
               Icon(Icons.logout_rounded, size: 20, color: Colors.redAccent),
               SizedBox(width: 12),
               Text('Sign Out', style: TextStyle(color: Colors.redAccent)),

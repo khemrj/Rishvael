@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/api_client.dart';
+import '../core/auth_service.dart';
 import '../core/jwt_decoder.dart';
 import '../core/user_role.dart';
 
@@ -12,17 +13,24 @@ class AuthState {
   const AuthState._({
     required this.status,
     this.token,
+    this.userId,
     this.role = UserRole.unknown,
   });
 
   final AuthStatus status;
   final String? token;
+  final int? userId;
   final UserRole role;
 
   factory AuthState.initial() => const AuthState._(status: AuthStatus.initial);
 
-  factory AuthState.authenticated(String token, UserRole role) =>
-      AuthState._(status: AuthStatus.authenticated, token: token, role: role);
+  factory AuthState.authenticated(String token, UserRole role, {int? userId}) =>
+      AuthState._(
+        status: AuthStatus.authenticated,
+        token: token,
+        userId: userId,
+        role: role,
+      );
 
   factory AuthState.unauthenticated() =>
       const AuthState._(status: AuthStatus.unauthenticated);
@@ -48,23 +56,28 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
       // this notifier's. This only decides "do we have a role to route
       // on", not "is this token still valid for API calls".
       final role = _extractRole(token);
-      return AuthState.authenticated(token, role);
+      final userId = await AuthService.readCurrentUserId();
+      return AuthState.authenticated(token, role, userId: userId);
     } catch (_) {
       return AuthState.unauthenticated();
     }
   }
 
   /// Call this after a successful login/signup API response.
-  Future<void> setToken(String token) async {
+  Future<void> setToken(String token, {int? userId}) async {
     await ApiClient.saveToken(token);
     final role = _extractRole(token);
-    state = AsyncData(AuthState.authenticated(token, role));
+    final resolvedUserId = userId ?? await AuthService.readCurrentUserId();
+    state = AsyncData(
+      AuthState.authenticated(token, role, userId: resolvedUserId),
+    );
   }
 
   /// Call this on explicit logout, or let ApiClient.onSessionExpired
   /// (wired in main.dart) call it automatically on an unrecoverable 401.
   Future<void> logout() async {
     await ApiClient.clearToken();
+    await AuthService.clearCurrentUserId();
     state = AsyncData(AuthState.unauthenticated());
   }
 

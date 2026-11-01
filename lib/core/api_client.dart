@@ -2,10 +2,14 @@ import 'dart:async';
 
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:logger/logger.dart';
 
 final Logger log = Logger();
+final dioProvider = Provider<Dio>((ref) {
+  return ApiClient.dio;
+});
 
 /// DROP-IN REPLACEMENT for your existing core/api_client.dart.
 ///
@@ -29,21 +33,22 @@ class ApiClient {
   // --------------------------------------------------------------------------
 
   /// Build-time override:
-  ///   flutter run -d RFCRA043GZJ --dart-define=API_BASE_URL=http://192.168.1.7:8080
+  ///   flutter run -d RFCRA043GZJ --dart-define=API_BASE_URL=http://192.168.1.78:8080
   ///   flutter build apk --dart-define=API_BASE_URL=https://api.rishvael.com
   ///
   /// A hardcoded LAN IP compiles fine and then dies in production — this is the
   /// one change in this file you should make before your first real build.
   static String get baseUrl {
-    const fromDefine = String.fromEnvironment('API_BASE_URL');
-    if (fromDefine.isNotEmpty) return fromDefine;
+    return 'http://192.168.1.78:8080';
+    // const fromDefine = String.fromEnvironment('API_BASE_URL');
+    // if (fromDefine.isNotEmpty) return fromDefine;
 
-    // Debug fallbacks. 10.0.2.2 is the Android emulator's alias for your host.
-    // Physical device on Wi-Fi still needs your LAN IP via --dart-define.
-    if (kIsWeb) return 'http://localhost:8080';
-    return defaultTargetPlatform == TargetPlatform.android
-        ? 'http://10.0.2.2:8080'
-        : 'http://localhost:8080';
+    // // Debug fallbacks. 10.0.2.2 is the Android emulator's alias for your host.
+    // // Physical device on Wi-Fi still needs your LAN IP via --dart-define.
+    // if (kIsWeb) return 'http://localhost:8080';
+    // return defaultTargetPlatform == TargetPlatform.android
+    //     ? 'http://10.0.2.2:8080'
+    //     : 'http://localhost:8080';
   }
 
   static const _publicPrefix = '/api/v1/auth/';

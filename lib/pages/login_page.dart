@@ -1,22 +1,29 @@
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:flutter_application_1/core/theme/app_colors.dart';
+import 'package:flutter_application_1/providers/AuthNotifier.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_application_1/pages/forgot_password_page.dart';
 import '../core/auth_service.dart';
 import 'customer_dashboard.dart';
 import 'admin_dashboard.dart';
 import 'signup_page.dart';
 
-class LoginPage extends StatefulWidget {
+class LoginPage extends ConsumerStatefulWidget {
   const LoginPage({super.key});
 
   @override
-  State<LoginPage> createState() => _LoginPageState();
+  ConsumerState<LoginPage> createState() => _LoginPageState();
 }
 
-class _LoginPageState extends State<LoginPage> {
+class _LoginPageState extends ConsumerState<LoginPage> {
   final _formKey = GlobalKey<FormState>();
-  final _emailController = TextEditingController();
-  final _passwordController = TextEditingController();
+  final _emailController = TextEditingController(
+    text: kDebugMode ? 'tt@gmail.com' : '',
+  );
+  final _passwordController = TextEditingController(
+    text: kDebugMode ? 'Sometimes@123' : '',
+  );
   final _authService = AuthService();
 
   bool _isLoading = false;
@@ -60,6 +67,13 @@ class _LoginPageState extends State<LoginPage> {
       if (!mounted) return;
 
       if (result.success) {
+        final token = result.token;
+        if (token != null) {
+          await ref
+              .read(authProvider.notifier)
+              .setToken(token, userId: result.userId);
+        }
+        if (!mounted) return;
         // Navigate based on role
         _navigateBasedOnRole(result.role);
       } else {
@@ -101,10 +115,7 @@ class _LoginPageState extends State<LoginPage> {
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(
-              horizontal: 24,
-              vertical: 20,
-            ),
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 440),
               child: Form(
@@ -232,8 +243,9 @@ class _LoginPageState extends State<LoginPage> {
                         onPressed: _isLoading ? null : _login,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppColors.goldDark,
-                          disabledBackgroundColor:
-                              goldDark.withValues(alpha: 0.2),
+                          disabledBackgroundColor: goldDark.withValues(
+                            alpha: 0.2,
+                          ),
                           foregroundColor: Colors.black,
                           disabledForegroundColor: Colors.white38,
                           shape: RoundedRectangleBorder(
@@ -469,25 +481,16 @@ class _ErrorBanner extends StatelessWidget {
       decoration: BoxDecoration(
         color: const Color(0xFF2C151B),
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(
-          color: Colors.redAccent.withValues(alpha: 0.5),
-        ),
+        border: Border.all(color: Colors.redAccent.withValues(alpha: 0.5)),
       ),
       child: Row(
         children: [
-          const Icon(
-            Icons.error_outline,
-            color: Colors.redAccent,
-            size: 20,
-          ),
+          const Icon(Icons.error_outline, color: Colors.redAccent, size: 20),
           const SizedBox(width: 10),
           Expanded(
             child: Text(
               message,
-              style: const TextStyle(
-                color: Colors.redAccent,
-                fontSize: 13,
-              ),
+              style: const TextStyle(color: Colors.redAccent, fontSize: 13),
             ),
           ),
         ],

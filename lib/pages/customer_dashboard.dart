@@ -1,9 +1,12 @@
 import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:flutter_application_1/core/theme/app_colors.dart';
+import 'package:flutter_application_1/pages/Chat/conversation_screen.dart';
+import 'package:flutter_application_1/pages/people_page.dart';
+import 'package:flutter_application_1/pages/user_search_screen.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../core/api_client.dart';
+import '../providers/AuthNotifier.dart';
 import 'login_page.dart';
 
 import '../core/responsive.dart';
@@ -13,6 +16,7 @@ import 'profile/profile_page.dart';
 import 'profile/widgets/member_avatar.dart';
 import '../providers/dashboard_providers.dart';
 import 'dashboard/advisory_page.dart';
+import 'dashboard/chat_screen.dart';
 import 'dashboard/network_page.dart';
 import 'dashboard/opportunities_page.dart';
 import '../pages/post_opportunity_page.dart';
@@ -22,10 +26,31 @@ import '../pages/post_opportunity_page.dart';
 typedef _Dest = ({String label, IconData icon, IconData selectedIcon});
 
 const _destinations = <_Dest>[
-  (label: 'Opportunities', icon: Icons.work_outline_rounded, selectedIcon: Icons.work_rounded),
-  (label: 'Advisory', icon: Icons.forum_outlined, selectedIcon: Icons.forum_rounded),
-  (label: 'Network', icon: Icons.groups_outlined, selectedIcon: Icons.groups_rounded),
-  (label: 'Profile', icon: Icons.person_outline_rounded, selectedIcon: Icons.person_rounded),
+  (
+    label: 'Opportunities',
+    icon: Icons.work_outline_rounded,
+    selectedIcon: Icons.work_rounded,
+  ),
+  (
+    label: 'Advisory',
+    icon: Icons.forum_outlined,
+    selectedIcon: Icons.forum_rounded,
+  ),
+  (
+    label: 'Network',
+    icon: Icons.groups_outlined,
+    selectedIcon: Icons.groups_rounded,
+  ),
+  (
+    label: 'People',
+    icon: Icons.person_search_outlined,
+    selectedIcon: Icons.person_search_rounded,
+  ),
+  (
+    label: 'Profile',
+    icon: Icons.person_outline_rounded,
+    selectedIcon: Icons.person_rounded,
+  ),
 ];
 
 /// Same class name your login_page already pushes — no routing changes needed.
@@ -42,8 +67,11 @@ class _CustomerDashboardState extends ConsumerState<CustomerDashboard> {
   /// Your original logout, kept verbatim in spirit: clear the token, then wipe
   /// the navigation stack so back can't return to an authenticated screen.
   Future<void> _signOut() async {
-   final navigator = Navigator.of(context, rootNavigator: true); // capture BEFORE the await
-    await ApiClient.clearToken();
+    final navigator = Navigator.of(
+      context,
+      rootNavigator: true,
+    ); // capture BEFORE the await
+    await ref.read(authProvider.notifier).logout();
     // Drop every cached provider so the next user never sees this one's data.
     ref.invalidate(profileProvider);
     if (!mounted) return;
@@ -52,7 +80,8 @@ class _CustomerDashboardState extends ConsumerState<CustomerDashboard> {
       (route) => false,
     );
   }
-Future<bool> _showLogoutDialog() async {
+
+  Future<bool> _showLogoutDialog() async {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
@@ -74,27 +103,31 @@ Future<bool> _showLogoutDialog() async {
     return confirm ?? false;
   }
 
-Future<void> _handleLogoutSequence() async {
+  Future<void> _handleLogoutSequence() async {
     final shouldLogout = await _showLogoutDialog();
+    if (!shouldLogout || !mounted) return;
+
     final navigator = Navigator.of(context, rootNavigator: true);
-    if (shouldLogout) {
-      // 1. Perform your actual logout logic (API calls, clearing local storage, etc.)
-      // await AuthService.to.logout();
+    await ref.read(authProvider.notifier).logout();
+    if (!mounted) return;
 
-      // 2. Always verify the widget is still mounted before using context after an async gap
-      if (!mounted) return;
-
-      // 3. Clear the entire navigation stack and push the user to the login screen
-     if (!mounted) return;
-
-  await navigator.pushAndRemoveUntil(
-    MaterialPageRoute<void>(builder: (_) => const LoginPage()),
-    (route) => false,
-  );
-    }
+    await navigator.pushAndRemoveUntil(
+      MaterialPageRoute<void>(builder: (_) => const LoginPage()),
+      (route) => false,
+    );
   }
+
   void _go(int i) {
     if (i != _index) setState(() => _index = i);
+  }
+
+  void _openNotifications() {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) =>
+            const ConversationsScreen(), // Replace with your actual notifications page
+      ),
+    );
   }
 
   /// DEV-ONLY: opens the business "post an opportunity" form from the
@@ -109,7 +142,11 @@ Future<void> _handleLogoutSequence() async {
     if (!mounted) return;
     if (result != null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Backend confirmed: "${result.title}" (id: ${result.id}) created.')),
+        SnackBar(
+          content: Text(
+            'Backend confirmed: "${result.title}" (id: ${result.id}) created.',
+          ),
+        ),
       );
     }
     // No snackbar on a null/cancelled result — PostOpportunityPage already
@@ -126,25 +163,26 @@ Future<void> _handleLogoutSequence() async {
     );
   }
 
- @override
-Widget build(BuildContext context) {
-  final size = context.breakpoint;
-  
-  // ONE decision, made once, at the shell. Every page below is
-  // breakpoint-agnostic — it just fills the space it's given.
-  final body = _ShellBody(index: _index);
+  @override
+  Widget build(BuildContext context) {
+    final size = context.breakpoint;
 
-  // Wrap the entire layout in PopScope to intercept the back gesture
-  return PopScope(
-      canPop: false, // Prevents default back gesture or physical button behavior
+    // ONE decision, made once, at the shell. Every page below is
+    // breakpoint-agnostic — it just fills the space it's given.
+    final body = _ShellBody(index: _index);
+
+    // Wrap the entire layout in PopScope to intercept the back gesture
+    return PopScope(
+      canPop:
+          false, // Prevents default back gesture or physical button behavior
       onPopInvokedWithResult: (bool didPop, Object? result) async {
         if (didPop) return;
 
         // Triggers the async logout sequence when back swipe/button is used
         await _handleLogoutSequence();
       },
-    child: switch (size) {
-      WindowSize.compact => Scaffold(
+      child: switch (size) {
+        WindowSize.compact => Scaffold(
           appBar: _buildAppBar(context, showTitle: true),
           body: SafeArea(child: body),
           floatingActionButton: _buildDebugFab(),
@@ -161,7 +199,7 @@ Widget build(BuildContext context) {
             ],
           ),
         ),
-      WindowSize.medium || WindowSize.expanded => Scaffold(
+        WindowSize.medium || WindowSize.expanded => Scaffold(
           appBar: _buildAppBar(context, showTitle: true),
           body: SafeArea(
             child: Row(
@@ -171,7 +209,7 @@ Widget build(BuildContext context) {
                   onDestinationSelected: _go,
                   extended: size.atLeastExpanded,
                   labelType: size.atLeastExpanded
-                      ? null 
+                      ? null
                       : NavigationRailLabelType.selected,
                   leading: const SizedBox(height: 8),
                   destinations: [
@@ -184,13 +222,13 @@ Widget build(BuildContext context) {
                   ],
                 ),
                 const VerticalDivider(width: 1),
-                Expanded(child: body), 
+                Expanded(child: body),
               ],
             ),
           ),
           floatingActionButton: _buildDebugFab(),
         ),
-      _ => Scaffold(
+        _ => Scaffold(
           body: SafeArea(
             child: Row(
               children: [
@@ -201,8 +239,10 @@ Widget build(BuildContext context) {
                     children: [
                       _DesktopHeader(
                         title: _destinations[_index].label,
-                        onSignOut: _signOut, // Alternatively hook this into the same dialog
+                        onSignOut:
+                            _signOut, // Alternatively hook this into the same dialog
                         onOpenProfile: () => _go(4),
+                        onOpenNotifications: _openNotifications,
                       ),
                       Expanded(child: body),
                     ],
@@ -213,34 +253,34 @@ Widget build(BuildContext context) {
           ),
           floatingActionButton: _buildDebugFab(),
         ),
-    },
-  );
-}
+      },
+    );
+  }
 
-  PreferredSizeWidget _buildAppBar(BuildContext context, {bool showTitle = true}) {
+  PreferredSizeWidget _buildAppBar(
+    BuildContext context, {
+    bool showTitle = true,
+  }) {
     return AppBar(
       titleSpacing: 20,
       title: showTitle
           ? Text(
               _index == 0 ? 'RISHVAEL' : _destinations[_index].label,
               style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    letterSpacing: _index == 0 ? 2.0 : 0,
-                  ),
+                letterSpacing: _index == 0 ? 2.0 : 0,
+              ),
             )
           : null,
       actions: [
         IconButton(
           tooltip: 'Notifications',
-          onPressed: () {},
+          onPressed: _openNotifications,
           icon: const Badge(
             label: Text('3'),
             child: Icon(Icons.notifications_none_rounded),
           ),
         ),
-        AccountMenuButton(
-          onOpenProfile: () => _go(4),
-          onSignOut: _signOut,
-        ),
+        AccountMenuButton(onOpenProfile: () => _go(4), onSignOut: _signOut),
         const SizedBox(width: 4),
       ],
     );
@@ -263,9 +303,9 @@ class _ShellBody extends StatelessWidget {
   Widget build(BuildContext context) {
     const pages = [
       OpportunitiesPage(),
-      AdvisoryPage(),
+      PeoplePage(),
       NetworkPage(),
-      ProfilePage(),
+      UserSearchScreen(),
     ];
 
     return IndexedStack(
@@ -305,18 +345,22 @@ class _PermanentDrawer extends ConsumerWidget {
                     color: AppColors.gold,
                     borderRadius: Radii.chip,
                   ),
-                  child: const Text('R',
-                      style: TextStyle(
-                          color: AppColors.gold,
-              
-                          fontWeight: FontWeight.w700)),
+                  child: const Text(
+                    'R',
+                    style: TextStyle(
+                      color: AppColors.gold,
+
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
                 ),
                 const SizedBox(width: 12),
-                Text('RISHVAEL',
-                    style: Theme.of(context)
-                        .textTheme
-                        .titleMedium
-                        ?.copyWith(letterSpacing: 2.4)),
+                Text(
+                  'RISHVAEL',
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleMedium?.copyWith(letterSpacing: 2.4),
+                ),
               ],
             ),
           ),
@@ -375,8 +419,10 @@ class _CompletionNudge extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('PROFILE ${(value * 100).round()}% COMPLETE',
-                  style: t.labelSmall),
+              Text(
+                'PROFILE ${(value * 100).round()}% COMPLETE',
+                style: t.labelSmall,
+              ),
               const SizedBox(height: 8),
               ClipRRect(
                 borderRadius: BorderRadius.circular(999),
@@ -404,37 +450,50 @@ class _DesktopHeader extends StatelessWidget {
     required this.title,
     required this.onSignOut,
     required this.onOpenProfile,
+    required this.onOpenNotifications,
   });
 
   final String title;
   final Future<void> Function() onSignOut;
   final VoidCallback onOpenProfile;
+  final VoidCallback onOpenNotifications;
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Padding(
-      padding: const EdgeInsets.fromLTRB(32, 20, 24, 8),
+      padding: const EdgeInsets.fromLTRB(24, 16, 16, 8),
       child: Row(
         children: [
-          Text(title, style: Theme.of(context).textTheme.headlineMedium),
-          const Spacer(),
-          const SizedBox(
-            width: 320,
-            child: _GlobalSearchField(),
+          // Flexible title: truncates instead of pushing the row wider.
+          Flexible(
+            flex: 0,
+            child: Text(
+              title,
+              overflow: TextOverflow.ellipsis,
+              maxLines: 1,
+              style: theme.textTheme.headlineMedium,
+            ),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 16),
+          // Search takes all remaining space, with a sensible cap.
+       
+            ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 420),
+              child: const _GlobalSearchField(),
+            ),
+          
+          const SizedBox(width: 8),
           IconButton(
             tooltip: 'Notifications',
-            onPressed: () {},
+            onPressed: onOpenNotifications,
             icon: const Badge(
               label: Text('3'),
               child: Icon(Icons.notifications_none_rounded),
             ),
           ),
-          AccountMenuButton(
-            onOpenProfile: onOpenProfile,
-            onSignOut: onSignOut,
-          ),
+          const SizedBox(width: 8),
+          AccountMenuButton(onOpenProfile: onOpenProfile, onSignOut: onSignOut),
         ],
       ),
     );

@@ -13,6 +13,7 @@ class AuthResult {
   final String? error;
   final String? role;
   final String? token;
+  final int? userId;
   final String? username;
   final String? email;
 
@@ -21,6 +22,7 @@ class AuthResult {
     this.error,
     this.role,
     this.token,
+    this.userId,
     this.username,
     this.email,
   });
@@ -29,6 +31,15 @@ class AuthResult {
 class AuthService {
   // Single instance — no need to recreate every call
   static const _storage = FlutterSecureStorage();
+  static const _userIdKey = 'user_id';
+
+  static Future<int?> readCurrentUserId() async {
+    final userId = await _storage.read(key: _userIdKey);
+    return userId == null ? null : int.tryParse(userId);
+  }
+
+  static Future<void> clearCurrentUserId() =>
+      _storage.delete(key: _userIdKey);
 
   // ── SIGNUP ──────────────────────────────────────────────────
   Future<AuthResult> signup({
@@ -65,6 +76,7 @@ class AuthService {
             success: true,
             role: data['role'] as String?,
             token: data['token'] as String?,
+            userId: _parseUserId(data['userId']),
             username: data['username'] as String?,
             email: data['email'] as String?,
           );
@@ -157,6 +169,7 @@ class AuthService {
           success: true,
           role: role,
           token: token,
+          userId: _parseUserId(data['userId']),
           username: data['username'] as String?,
           email: data['email'] as String?,
         );
@@ -180,6 +193,7 @@ class AuthService {
     await _storage.delete(key: 'user_role');
     await _storage.delete(key: 'user_email');
     await _storage.delete(key: 'username');
+    await clearCurrentUserId();
   }
 
   // ── HELPERS ─────────────────────────────────────────────────
@@ -211,6 +225,18 @@ class AuthService {
         value: data['username'] as String,
       );
     }
+    final userId = _parseUserId(data['userId']);
+    if (userId == null) {
+      await _storage.delete(key: _userIdKey);
+    } else {
+      await _storage.write(key: _userIdKey, value: userId.toString());
+    }
+  }
+
+  int? _parseUserId(Object? value) {
+    if (value is num) return value.toInt();
+    if (value is String) return int.tryParse(value);
+    return null;
   }
 
   /// Extracts the human-readable error from server response.
